@@ -5,9 +5,6 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nestable2/1.6.0/jquery.nestable.min.css">
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/nestable2/1.6.0/jquery.nestable.min.js"></script>
-
 <style>
     .dd { position: relative; display: block; margin: 0; padding: 0; max-width: 100%; list-style: none; font-size: 14px; line-height: 20px; }
     .dd-list { display: block; position: relative; margin: 0; padding: 0; list-style: none; }
@@ -200,6 +197,8 @@
     </div>
 </div>
 
+@push('scripts')
+<script src="https://cdnjs.cloudflare.com/ajax/libs/nestable2/1.6.0/jquery.nestable.min.js"></script>
 <script>
 $(document).ready(function() {
     // Initialize Nestable
@@ -291,4 +290,6 @@ $(document).ready(function() {
     });
 });
 </script>
+@endpush
+
 @endsection
