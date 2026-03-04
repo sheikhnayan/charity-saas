@@ -21,7 +21,7 @@
                                 </div>
                             </div>
                             <div class="page-title-actions">
-                                <a href="{{ route('admin.menus.create') }}" class="btn btn-primary">
+                                <a href="{{ route('admin.menus.create', $website->id) }}" class="btn btn-primary">
                                     <i class="fas fa-plus me-2"></i>Create New Menu
                                 </a>
                             </div>
@@ -66,10 +66,10 @@
                                                         @endif
                                                     </td>
                                                     <td>
-                                                        <a href="{{ route('admin.menus.edit', $menu->id) }}" class="btn btn-sm btn-primary">
+                                                        <a href="{{ route('admin.menus.edit', [$website->id, $menu->id]) }}" class="btn btn-sm btn-primary">
                                                             <i class="fas fa-edit"></i> Edit
                                                         </a>
-                                                        <form action="{{ route('admin.menus.destroy', $menu->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this menu?');">
+                                                        <form action="{{ route('admin.menus.destroy', [$website->id, $menu->id]) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this menu?');">
                                                             @csrf
                                                             @method('DELETE')
                                                             <button type="submit" class="btn btn-sm btn-danger">

@@ -8,62 +8,32 @@ use App\Models\Menu;
 use App\Models\MenuItem;
 use App\Models\Page;
 use App\Models\Website;
-use Illuminate\Support\Facades\Auth;
 
 class MenuController extends Controller
 {
-    private function resolveWebsite()
+    public function websites()
     {
-        if (Auth::check() && Auth::user()->website_id) {
-            $website = Website::find(Auth::user()->website_id);
-            if ($website) {
-                return $website;
-            }
-        }
-
-        $domain = request()->getHost();
-
-        $website = Website::where('domain', $domain)->first();
-        if ($website) {
-            return $website;
-        }
-
-        $website = Website::where('domain', 'www.' . $domain)->first();
-        if ($website) {
-            return $website;
-        }
-
-        $website = Website::where('domain', str_replace('www.', '', $domain))->first();
-        if ($website) {
-            return $website;
-        }
-
-        return Website::first();
+        $data = Website::all();
+        return view('admin.menus.websites', compact('data'));
     }
 
-    public function index()
+    public function index($websiteId)
     {
-        $website = $this->resolveWebsite();
-        if (!$website) {
-            return redirect()->back()->with('error', 'No website found to manage menus.');
-        }
+        $website = Website::findOrFail($websiteId);
         
         $menus = Menu::where('website_id', $website->id)->with('allItems')->get();
         
         return view('admin.menus.index', compact('menus', 'website'));
     }
 
-    public function create()
+    public function create($websiteId)
     {
-        $website = $this->resolveWebsite();
-        if (!$website) {
-            return redirect()->back()->with('error', 'No website found to manage menus.');
-        }
+        $website = Website::findOrFail($websiteId);
         
         return view('admin.menus.create', compact('website'));
     }
 
-    public function store(Request $request)
+    public function store(Request $request, $websiteId)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -71,28 +41,24 @@ class MenuController extends Controller
             'status' => 'boolean',
         ]);
 
-        $website = $this->resolveWebsite();
-        if (!$website) {
-            return redirect()->back()->with('error', 'No website found to create menu.');
-        }
+        $website = Website::findOrFail($websiteId);
 
         $validated['website_id'] = $website->id;
         $validated['status'] = $request->has('status') ? 1 : 0;
 
         Menu::create($validated);
 
-        return redirect()->route('admin.menus.index')->with('success', 'Menu created successfully!');
+        return redirect()->route('admin.menus.list', $website->id)->with('success', 'Menu created successfully!');
     }
 
-    public function edit($id)
+    public function edit($websiteId, $id)
     {
-        $menu = Menu::with(['allItems.page'])->findOrFail($id);
+        $website = Website::findOrFail($websiteId);
 
-        $website = $this->resolveWebsite();
-        if (!$website) {
-            return redirect()->back()->with('error', 'No website found to edit menu.');
-        }
-        
+        $menu = Menu::with(['allItems.page'])
+            ->where('website_id', $website->id)
+            ->findOrFail($id);
+
         $pages = Page::where('website_id', $website->id)
                      ->where('status', 1)
                      ->orderBy('name')
@@ -101,9 +67,10 @@ class MenuController extends Controller
         return view('admin.menus.edit', compact('menu', 'website', 'pages'));
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, $websiteId, $id)
     {
-        $menu = Menu::findOrFail($id);
+        $website = Website::findOrFail($websiteId);
+        $menu = Menu::where('website_id', $website->id)->findOrFail($id);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -115,20 +82,22 @@ class MenuController extends Controller
 
         $menu->update($validated);
 
-        return redirect()->route('admin.menus.index')->with('success', 'Menu updated successfully!');
+        return redirect()->route('admin.menus.list', $website->id)->with('success', 'Menu updated successfully!');
     }
 
-    public function destroy($id)
+    public function destroy($websiteId, $id)
     {
-        $menu = Menu::findOrFail($id);
+        $website = Website::findOrFail($websiteId);
+        $menu = Menu::where('website_id', $website->id)->findOrFail($id);
         $menu->delete();
 
-        return redirect()->route('admin.menus.index')->with('success', 'Menu deleted successfully!');
+        return redirect()->route('admin.menus.list', $website->id)->with('success', 'Menu deleted successfully!');
     }
 
-    public function updateMenuItems(Request $request, $id)
+    public function updateMenuItems(Request $request, $websiteId, $id)
     {
-        $menu = Menu::findOrFail($id);
+        $website = Website::findOrFail($websiteId);
+        $menu = Menu::where('website_id', $website->id)->findOrFail($id);
         
         // Delete all existing items
         $menu->allItems()->delete();
@@ -165,7 +134,7 @@ class MenuController extends Controller
         }
     }
 
-    public function addItem(Request $request, $id)
+    public function addItem(Request $request, $websiteId, $id)
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -177,7 +146,8 @@ class MenuController extends Controller
             'status' => 'boolean',
         ]);
 
-        $menu = Menu::findOrFail($id);
+        $website = Website::findOrFail($websiteId);
+        $menu = Menu::where('website_id', $website->id)->findOrFail($id);
         
         // Get the highest order value for this menu
         $maxOrder = MenuItem::where('menu_id', $menu->id)
@@ -190,14 +160,17 @@ class MenuController extends Controller
 
         MenuItem::create($validated);
 
-        return redirect()->route('admin.menus.edit', $id)->with('success', 'Menu item added successfully!');
+        return redirect()->route('admin.menus.edit', [$website->id, $id])->with('success', 'Menu item added successfully!');
     }
 
-    public function removeItem($id, $itemId)
+    public function removeItem($websiteId, $id, $itemId)
     {
+        $website = Website::findOrFail($websiteId);
+        Menu::where('website_id', $website->id)->findOrFail($id);
+
         $menuItem = MenuItem::where('menu_id', $id)->where('id', $itemId)->firstOrFail();
         $menuItem->delete();
 
-        return redirect()->route('admin.menus.edit', $id)->with('success', 'Menu item removed successfully!');
+        return redirect()->route('admin.menus.edit', [$website->id, $id])->with('success', 'Menu item removed successfully!');
     }
 }

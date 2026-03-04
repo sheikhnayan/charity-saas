@@ -54,7 +54,7 @@
                                 </div>
                             </div>
                             <div class="page-title-actions">
-                                <a href="{{ route('admin.menus.index') }}" class="btn btn-secondary">
+                                <a href="{{ route('admin.menus.list', $website->id) }}" class="btn btn-secondary">
                                     <i class="fas fa-arrow-left me-2"></i>Back to Menus
                                 </a>
                             </div>
@@ -76,7 +76,7 @@
                                     <i class="header-icon fas fa-cog me-2"></i>Menu Settings
                                 </div>
                                 <div class="card-body">
-                                    <form action="{{ route('admin.menus.update', $menu->id) }}" method="POST">
+                                    <form action="{{ route('admin.menus.update', [$website->id, $menu->id]) }}" method="POST">
                                         @csrf
                                         @method('PUT')
                                         
@@ -272,7 +272,7 @@ $(document).ready(function() {
         var structure = $('#menu-nestable').nestable('serialize');
         
         $.ajax({
-            url: '{{ route("admin.menus.update-items", $menu->id) }}',
+            url: '{{ route("admin.menus.update-items", [$website->id, $menu->id]) }}',
             method: 'POST',
             data: {
                 _token: '{{ csrf_token() }}',

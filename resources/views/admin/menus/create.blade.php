@@ -21,7 +21,7 @@
                                 </div>
                             </div>
                             <div class="page-title-actions">
-                                <a href="{{ route('admin.menus.index') }}" class="btn btn-secondary">
+                                <a href="{{ route('admin.menus.list', $website->id) }}" class="btn btn-secondary">
                                     <i class="fas fa-arrow-left me-2"></i>Back to Menus
                                 </a>
                             </div>
@@ -33,7 +33,7 @@
                             <i class="header-icon fas fa-edit me-2"></i>Menu Details
                         </div>
                         <div class="card-body">
-                            <form action="{{ route('admin.menus.store') }}" method="POST">
+                            <form action="{{ route('admin.menus.store', $website->id) }}" method="POST">
                                 @csrf
                                 
                                 <div class="mb-3">
@@ -76,7 +76,7 @@
                                     <button type="submit" class="btn btn-primary">
                                         <i class="fas fa-save me-2"></i>Create Menu
                                     </button>
-                                    <a href="{{ route('admin.menus.index') }}" class="btn btn-secondary">
+                                    <a href="{{ route('admin.menus.list', $website->id) }}" class="btn btn-secondary">
                                         Cancel
                                     </a>
                                 </div>
