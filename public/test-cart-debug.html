@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cart Debug Test</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: #f9fafb;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        .logs {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .log-line {
+            margin: 5px 0;
+            padding: 3px;
+            border-radius: 2px;
+        }
+        .log-error {
+            background: #ffe6e6;
+            color: #cc0000;
+        }
+        .log-success {
+            background: #e6ffe6;
+            color: #00cc00;
+        }
+        .log-warn {
+            background: #fffacd;
+            color: #ff9900;
+        }
+        .log-info {
+            background: #e6f2ff;
+            color: #0066cc;
+        }
+        .test-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        .test-btn:hover {
+            background: #764ba2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛒 Cart System Debug Test</h1>
+        
+        <p>This page tests if the cart.js file loads and initializes correctly.</p>
+        
+        <button class="test-btn" onclick="testAddToCart()">Test: Add Item to Cart</button>
+        <button class="test-btn" onclick="checkCartButton()">Check: Cart Button Status</button>
+        <button class="test-btn" onclick="clearLogs()">Clear Logs</button>
+        
+        <h3>Console Output:</h3>
+        <div class="logs" id="logContainer"></div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="js/cart.js"></script>
+    
+    <script>
+        // Override console.log to capture logs
+        const logContainer = document.getElementById('logContainer');
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        function addLogLine(message, type = 'info') {
+            const line = document.createElement('div');
+            line.className = `log-line log-${type}`;
+            line.textContent = message;
+            logContainer.appendChild(line);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            addLogLine(args.join(' '), 'info');
+            originalLog.apply(console, args);
+        };
+        
+        console.error = function(...args) {
+            addLogLine('❌ ERROR: ' + args.join(' '), 'error');
+            originalError.apply(console, args);
+        };
+        
+        console.warn = function(...args) {
+            addLogLine('⚠️ WARN: ' + args.join(' '), 'warn');
+            originalWarn.apply(console, args);
+        };
+        
+        // Initial checks
+        setTimeout(() => {
+            addLogLine('=== INITIAL CHECKS ===', 'info');
+            addLogLine('jQuery loaded: ' + (typeof jQuery !== 'undefined' ? '✅ YES' : '❌ NO'), typeof jQuery !== 'undefined' ? 'success' : 'error');
+            addLogLine('ShoppingCart object: ' + (typeof window.ShoppingCart !== 'undefined' ? '✅ YES' : '❌ NO'), typeof window.ShoppingCart !== 'undefined' ? 'success' : 'error');
+            addLogLine('document.body: ' + (document.body ? '✅ EXISTS' : '❌ MISSING'), document.body ? 'success' : 'error');
+            
+            const cartBtn = document.getElementById('floatingCartButton');
+            addLogLine('Cart button in DOM: ' + (cartBtn ? '✅ YES' : '❌ NO'), cartBtn ? 'success' : 'error');
+            
+            if (cartBtn) {
+                const style = window.getComputedStyle(cartBtn);
+                addLogLine('  - Display: ' + style.display, 'info');
+                addLogLine('  - Position: ' + style.position, 'info');
+                addLogLine('  - Z-Index: ' + style.zIndex, 'info');
+                addLogLine('  - Bottom: ' + style.bottom, 'info');
+                addLogLine('  - Right: ' + style.right, 'info');
+            }
+        }, 500);
+        
+        function testAddToCart() {
+            addLogLine('=== TESTING ADD TO CART ===', 'info');
+            if (typeof window.addToCart === 'function') {
+                addLogLine('✅ addToCart function exists', 'success');
+                const testItem = {
+                    id: 'test-' + Date.now(),
+                    name: 'Test Item',
+                    price: 99.99,
+                    quantity: 1
+                };
+                window.addToCart(testItem);
+                addLogLine('✅ Item queued for cart', 'success');
+            } else {
+                addLogLine('❌ addToCart function not found', 'error');
+            }
+        }
+        
+        function checkCartButton() {
+            addLogLine('=== CHECKING CART BUTTON ===', 'info');
+            const cartBtn = document.getElementById('floatingCartButton');
+            if (cartBtn) {
+                addLogLine('✅ Cart button found in DOM', 'success');
+                const style = window.getComputedStyle(cartBtn);
+                addLogLine('Display: ' + style.display, 'info');
+                addLogLine('Visibility: ' + style.visibility, 'info');
+                addLogLine('Opacity: ' + style.opacity, 'info');
+                addLogLine('Z-Index: ' + style.zIndex, 'info');
+                addLogLine('Position: ' + style.position, 'info');
+                
+                if (style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0') {
+                    addLogLine('✅ Cart button should be visible', 'success');
+                } else {
+                    addLogLine('❌ Cart button is hidden (display/visibility/opacity issue)', 'error');
+                }
+            } else {
+                addLogLine('❌ Cart button NOT found in DOM', 'error');
+            }
+        }
+        
+        function clearLogs() {
+            logContainer.innerHTML = '';
+        }
+    </script>
+</body>
+</html>

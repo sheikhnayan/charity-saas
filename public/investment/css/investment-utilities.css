@@ -1,0 +1,143 @@
+/* Investment Page Scoped Utilities */
+/* 
+IMPORTANT: These utility classes are scoped to the investment page only to prevent conflicts with other components.
+
+USAGE:
+- Only use these classes within the .investment-page container
+- These classes have the "utility-" prefix to avoid naming conflicts
+- Examples:
+  - .utility-padding-0 (instead of .padding-0)
+  - .utility-margin-top (instead of .margin-top)
+  
+PROBLEM SOLVED:
+- Previous global utility classes (.padding-0, .margin-0, etc.) were affecting ALL components
+- These scoped utilities only apply to investment page components
+- No more unintended padding/margin resets on other pages
+*/
+
+.investment-page .utility-margin-0 {
+  margin: 0rem !important;
+}
+  
+.investment-page .utility-padding-0 {
+  padding: 0rem !important;
+}
+
+.investment-page .utility-spacing-clean {
+  padding: 0rem !important;
+  margin: 0rem !important;
+}
+
+.investment-page .utility-margin-top {
+  margin-right: 0rem !important;
+  margin-bottom: 0rem !important;
+  margin-left: 0rem !important;
+}
+
+.investment-page .utility-padding-top {
+  padding-right: 0rem !important;
+  padding-bottom: 0rem !important;
+  padding-left: 0rem !important;
+}
+  
+.investment-page .utility-margin-right {
+  margin-top: 0rem !important;
+  margin-bottom: 0rem !important;
+  margin-left: 0rem !important;
+}
+
+.investment-page .utility-padding-right {
+  padding-top: 0rem !important;
+  padding-bottom: 0rem !important;
+  padding-left: 0rem !important;
+}
+
+.investment-page .utility-margin-bottom {
+  margin-top: 0rem !important;
+  margin-right: 0rem !important;
+  margin-left: 0rem !important;
+}
+
+.investment-page .utility-padding-bottom {
+  padding-top: 0rem !important;
+  padding-right: 0rem !important;
+  padding-left: 0rem !important;
+}
+
+.investment-page .utility-margin-left {
+  margin-top: 0rem !important;
+  margin-right: 0rem !important;
+  margin-bottom: 0rem !important;
+}
+  
+.investment-page .utility-padding-left {
+  padding-top: 0rem !important;
+  padding-right: 0rem !important;
+  padding-bottom: 0rem !important;
+}
+  
+.investment-page .utility-margin-horizontal {
+  margin-top: 0rem !important;
+  margin-bottom: 0rem !important;
+}
+
+.investment-page .utility-padding-horizontal {
+  padding-top: 0rem !important;
+  padding-bottom: 0rem !important;
+}
+
+.investment-page .utility-margin-vertical {
+  margin-right: 0rem !important;
+  margin-left: 0rem !important;
+}
+  
+.investment-page .utility-padding-vertical {
+  padding-right: 0rem !important;
+  padding-left: 0rem !important;
+}
+
+/* Hide and Display Utilities - Scoped */
+.investment-page .utility-hide {
+  display: none !important;
+}
+
+.investment-page .utility-display-inlineflex {
+  display: inline-flex;
+}
+
+/* Responsive Hide Classes - Scoped */
+@media screen and (max-width: 991px) {
+    .investment-page .utility-hide-tablet {
+        display: none !important;
+    }
+}
+
+@media screen and (max-width: 767px) {
+    .investment-page .utility-hide-mobile-landscape{
+      display: none !important;
+    }
+}
+
+@media screen and (max-width: 479px) {
+    .investment-page .utility-hide-mobile{
+      display: none !important;
+    }
+}
+
+/* Width and Text Utilities - Scoped */
+.investment-page .utility-truncate-width { 
+    width: 100%; 
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+}
+
+/* Scrollbar Utilities - Scoped */
+.investment-page .utility-no-scrollbar {
+    -ms-overflow-style: none;
+    overflow: -moz-scrollbars-none; 
+}
+
+.investment-page .utility-no-scrollbar::-webkit-scrollbar {
+    display: none;
+}

@@ -1,0 +1,25 @@
+/* Google Fonts - Inconsolata, Inter, Graduate */
+@import url('https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;700&family=Inter:wght@300;400;500;600;700;800&family=Graduate&display=swap');
+
+/* Font face declarations for better control */
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+.font-inconsolata {
+  font-family: 'Inconsolata', monospace;
+}
+
+.font-graduate {
+  font-family: 'Graduate', serif;
+}
+
+/* Webfont loading optimization */
+.wf-loading {
+  visibility: hidden;
+}
+
+.wf-active,
+.wf-inactive {
+  visibility: visible;
+}

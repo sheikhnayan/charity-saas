@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Funnel Tracking Test</title>
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+</head>
+<body>
+    <div style="padding: 20px; font-family: Arial, sans-serif;">
+        <h1>Payment Funnel Tracking Test</h1>
+        <div id="results"></div>
+        <button onclick="testTracking()">Test Tracking System</button>
+        <button onclick="testAPI()">Test API Endpoint</button>
+    </div>
+
+    <script>
+        function testTracking() {
+            fetch('/test-funnel-tracking')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('results').innerHTML = 
+                        '<h3>Tracking Test Results:</h3><pre>' + 
+                        JSON.stringify(data, null, 2) + 
+                        '</pre>';
+                })
+                .catch(error => {
+                    document.getElementById('results').innerHTML = 
+                        '<h3>Error:</h3><pre>' + error.message + '</pre>';
+                });
+        }
+
+        function testAPI() {
+            fetch('/api/track-funnel', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': 'test-token'
+                },
+                body: JSON.stringify({
+                    step: 'form_view',
+                    form_type: 'general'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('results').innerHTML = 
+                    '<h3>API Test Results:</h3><pre>' + 
+                    JSON.stringify(data, null, 2) + 
+                    '</pre>';
+            })
+            .catch(error => {
+                document.getElementById('results').innerHTML = 
+                    '<h3>API Error:</h3><pre>' + error.message + '</pre>';
+            });
+        }
+    </script>
+</body>
+</html>

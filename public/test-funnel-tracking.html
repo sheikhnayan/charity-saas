@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="test-token">
+    <title>Payment Funnel Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div id="general-donation-form" class="card">
+                    <div class="card-header">
+                        <h5>Test Donation Form</h5>
+                    </div>
+                    <div class="card-body">
+                        <form action="/donations" method="POST">
+                            <div class="mb-3">
+                                <label for="donation_amount" class="form-label">Donation Amount</label>
+                                <input type="number" class="form-control" id="donation_amount" name="donation_amount" placeholder="Enter amount">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="first_name" class="form-label">First Name</label>
+                                <input type="text" class="form-control" id="first_name" name="first_name" placeholder="Enter first name">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="last_name" class="form-label">Last Name</label>
+                                <input type="text" class="form-control" id="last_name" name="last_name" placeholder="Enter last name">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" name="email" placeholder="Enter email">
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary donate-btn">Donate Now</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="js/payment-funnel-tracking.js"></script>
+    
+    <script>
+        // Test the tracking functionality
+        console.log('Payment funnel tracker initialized:', window.paymentFunnelTracker);
+        
+        // Monitor form interactions
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Test page loaded, tracking should be active');
+            
+            // Add event listeners to log tracking events
+            const originalSendTrackingEvent = window.paymentFunnelTracker?.sendTrackingEvent;
+            if (originalSendTrackingEvent) {
+                window.paymentFunnelTracker.sendTrackingEvent = function(endpoint, data) {
+                    console.log('Tracking event:', endpoint, data);
+                    return originalSendTrackingEvent.call(this, endpoint, data);
+                };
+            }
+        });
+    </script>
+</body>
+</html>

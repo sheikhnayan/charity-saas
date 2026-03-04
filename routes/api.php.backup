@@ -1,0 +1,156 @@
+<?php
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\PageBuilderController;
+use App\Http\Controllers\Api\CommentController;
+use Illuminate\Support\Facades\Log;
+
+Route::middleware('auth')->group(function () {
+    Route::post('/page-builder/save', [PageBuilderController::class, 'save']);
+    Route::get('/page-builder/load', [PageBuilderController::class, 'load']);
+});
+
+// Public comment routes (no auth required for posting comments)
+Route::post('/comments', [CommentController::class, 'store']);
+Route::get('/comments', [CommentController::class, 'index']);
+
+// DealMaker API endpoints (no auth/CSRF required for investment platform integration)
+Route::post('/investor', function (Request $request) {
+    $dealId = $request->query('dealId');
+    $payload = $request->all();
+    
+    Log::info('DealMaker Investor POST', [
+        'dealId' => $dealId,
+        'payload' => $payload
+    ]);
+    
+    // Return DealMaker-compatible response format
+    return response()->json([
+        'success' => true,
+        'investor' => [
+            'id' => rand(1000, 9999),
+            'dealId' => $dealId,
+            'status' => 'pending',
+            'created_at' => now()->toISOString(),
+            'data' => $payload
+        ]
+    ], 200);
+});
+
+Route::put('/investor', function (Request $request) {
+    $dealId = $request->query('dealId');
+    $payload = $request->all();
+    
+    Log::info('DealMaker Investor PUT', [
+        'dealId' => $dealId,
+        'payload' => $payload
+    ]);
+    
+    // Return DealMaker-compatible response format
+    return response()->json([
+        'success' => true,
+        'investor' => [
+            'id' => $payload['id'] ?? rand(1000, 9999),
+            'dealId' => $dealId,
+            'status' => 'updated',
+            'updated_at' => now()->toISOString(),
+            'data' => $payload
+        ]
+    ], 200);
+});
+
+Route::post('/deal/{dealId}/investors', function (Request $request, $dealId) {
+    $email = $request->query('email');
+    $payload = $request->all();
+    
+    Log::info('DealMaker Deal Investors', [
+        'dealId' => $dealId,
+        'email' => $email,
+        'payload' => $payload
+    ]);
+    
+    // Return DealMaker-compatible response format
+    return response()->json([
+        'success' => true,
+        'deal' => [
+            'id' => $dealId,
+            'status' => 'active'
+        ],
+        'investor' => [
+            'id' => rand(1000, 9999),
+            'email' => $email,
+            'status' => 'verified',
+            'tags' => $payload['tags'] ?? [],
+            'mode' => $payload['mode'] ?? 'standard'
+        ]
+    ], 200);
+});
+
+Route::post('/investor-profile/{type}', function (Request $request, $type) {
+    $dealId = $request->query('dealId');
+    $payload = $request->all();
+    
+    Log::info('DealMaker Investor Profile', [
+        'type' => $type,
+        'dealId' => $dealId,
+        'payload' => $payload
+    ]);
+    
+    // Return DealMaker-compatible response format
+    return response()->json([
+        'success' => true,
+        'profile' => [
+            'id' => rand(1000, 9999),
+            'type' => $type,
+            'dealId' => $dealId,
+            'status' => 'created',
+            'data' => $payload
+        ]
+    ], 200);
+});
+
+Route::post('/klaviyo-v5/subscribe', function (Request $request) {
+    $payload = $request->all();
+    
+    Log::info('DealMaker Klaviyo Subscribe', [
+        'payload' => $payload
+    ]);
+    
+    // Return Klaviyo-compatible response format
+    return response()->json([
+        'success' => true,
+        'subscription' => [
+            'id' => rand(1000, 9999),
+            'email' => $payload['email'] ?? null,
+            'status' => 'subscribed',
+            'list_id' => 'default'
+        ]
+    ], 200);
+});
+
+// DealMaker logger endpoint
+Route::post('/logger', function (Request $request) {
+    $level = $request->input('level', 'info');
+    $source = $request->input('source', 'dealmaker');
+    $reason = $request->input('reason', 'unknown');
+    $data = $request->input('data', []);
+    
+    $logMessage = "DealMaker Log - Source: $source, Reason: $reason";
+    
+    switch ($level) {
+        case 'error':
+            Log::error($logMessage, ['data' => $data]);
+            break;
+        case 'warning':
+            Log::warning($logMessage, ['data' => $data]);
+            break;
+        case 'debug':
+            Log::debug($logMessage, ['data' => $data]);
+            break;
+        default:
+            Log::info($logMessage, ['data' => $data]);
+    }
+    
+    return response()->json(['status' => 'logged'], 200);
+});

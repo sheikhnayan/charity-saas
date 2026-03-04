@@ -1,0 +1,1769 @@
+@php
+    // Get website data based on current domain
+    $url = url()->current();
+    $domain = parse_url($url, PHP_URL_HOST);
+    $check = \App\Models\Website::where('domain', $domain)->first();
+
+    if ($check) {
+        $user_id = $check->user_id;
+        $setting = \App\Models\Setting::where('user_id', $user_id)->first();
+        $header = \App\Models\Header::where('user_id', $user_id)->first();
+        $footer = \App\Models\Footer::where('user_id', $user_id)->first();
+        $website = $check;
+    } else {
+        $setting = null;
+        $header = null;
+        $footer = null;
+        $website = null;
+    }
+@endphp
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{{ $setting && $setting->company_name ? $setting->company_name . ' | Checkout' : 'Checkout' }}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/assets/owl.carousel.min.css">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/owl.carousel.min.js"></script>
+    <!-- Dealmaker CSS - Now Hosted Locally -->
+    <link rel="stylesheet" href="{{ asset('dealmaker/css/InvestorCheckoutSectionWrapper-wcM9GlqN.css') }}">
+    <link rel="stylesheet" href="{{ asset('dealmaker/css/application-ibex.css') }}">
+    <link rel="stylesheet" href="{{ asset('dealmaker/css/tailwind-dealmaker.css') }}">
+    <link rel="stylesheet" href="{{ asset('dealmaker/css/InvestorCheckout-DihLlEqN.css') }}">
+    <link rel="stylesheet" href="{{ asset('dealmaker/css/CloseState-CsvtbMrM.css') }}">
+    <link rel="stylesheet" href="{{ asset('dealmaker/css/CloseStateDetails-Bc7zj43F.css') }}">
+    <link rel="stylesheet" href="{{ asset('dealmaker/css/InvestorConfirmation-CfHa4AcH.css') }}">
+    <link rel="stylesheet" href="{{ asset('dealmaker/css/sectionsStore-C-lrRT9A.css') }}">
+    <link rel="stylesheet" href="{{ asset('dealmaker/css/PaymentMethod-DIAsxxLk.css') }}">
+    <link rel="stylesheet" href="{{ asset('dealmaker/css/Form-DEV-JJZY.css') }}">
+    <link rel="stylesheet" href="{{ asset('dealmaker/css/Select-0A2Q_mBN.css') }}">
+    <link rel="stylesheet" href="{{ asset('dealmaker/css/PhoneInput-fkevI5k7.css') }}">
+    <link rel="stylesheet" href="{{asset('stripe.css')}}">
+    {{--
+    <link rel="stylesheet" href="{{ asset('css/style.css') }}"> --}}
+
+    <style>
+        .footer-socials .nav-item {
+            margin-right: 1rem !important;
+        }
+
+        .footer-socials .nav-item a i {
+            font-size: 1.5rem;
+        }
+
+        footer {
+            position: relative;
+            width: 100%;
+            bottom: 0;
+            margin-top: 2rem;
+        }
+
+        nav {
+            box-shadow: 0 .25rem .5rem rgba(0, 0, 0, .5);
+            padding-block: 1rem !important;
+            letter-spacing: -.5px;
+        }
+
+        select {
+            min-height: 44px;
+            max-height: 44px;
+        }
+
+        input {
+            min-height: 44px;
+            max-height: 44px;
+        }
+
+        .StripeElement {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+         .invest-button-section {
+            flex-shrink: 0;
+        }
+
+        .invest-now-btn {
+            background: #28a745;
+            color: #ffffff;
+            border: none;
+            padding: 12px 32px;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            min-width: 140px;
+        }
+
+        .sssssttttt{
+            padding: 1.25rem 2.7rem !important;
+            border-radius: 0px !important;
+        }
+
+        .invest-now-btn:hover {
+            background: #218838;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+        }
+
+        .invest-now-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
+        }
+
+        .card-payment-icons-container div svg {
+            width: 15px;
+            height: 15px;
+        }
+
+        .card-payment-icons-container{
+            display: inherit;
+        }
+    </style>
+
+
+</head>
+
+<body>
+    @php
+        $payment = \App\Models\PaymentSetting::find(1);
+
+    @endphp
+    @php
+        $url = url()->current();
+        $doamin = parse_url($url, PHP_URL_HOST);
+        $check = \App\Models\Website::where('domain', $doamin)->first();
+        $header = \App\Models\Header::where('website_id', $check->id)->first();
+        $footer = \App\Models\Footer::where('website_id', $check->id)->first();
+        $setting = \App\Models\Setting::where('user_id', $check->user_id)->first();
+        // dd($data->amount);
+
+    @endphp
+    @if ($header->status == 1)
+        @include('layouts.nav')
+    @endif
+    <div class="mb-4">
+        @session('success')
+            <div class="alert alert-success mt-4" role="alert">
+                Purchase Pending
+            </div>
+        @endsession
+
+        @session('error')
+            <div class="alert alert-danger mt-4" role="alert">
+                {{ $value }}
+            </div>
+        @endsession
+        
+        @if ($errors->any())
+            <div class="alert alert-danger mt-4" role="alert">
+                <h6>Please fix the following errors:</h6>
+                <ul class="mb-0">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+        
+        
+        
+        <div class="container mt-4">
+            <!-- Card Error Display -->
+            <div class="row justify-content-center">
+                <div class="col-md-6">
+                    <div id="card-errors" class="alert alert-danger" style="display: none;"></div>
+                </div>
+            </div>
+            <!-- Back Button -->
+        <div class="container" style="margin-top: 10rem !important;">
+            <div class="row justify-content-center">
+                <div class="col-md-6">
+                    <button onclick="window.history.back()" class="btn btn-outline-secondary mb-3">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Previous Page
+                    </button>
+                </div>
+            </div>
+        </div>
+            <form action="{{ route('stripe.post') }}" id="payment-form" method="post">
+                @csrf
+                <div class="row justify-content-center">
+                    <div class="col-md-6" style="margin-bottom: 5rem;">
+                        <div class="card">
+                            <div class="container p-2 svelte-bty8ba" data-testid="investor-checkout-container">
+                                <div class="py-2 section-item svelte-awum1m" id="investment_amount"
+                                    data-testid="investment_amount-section">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <h3>Items</h3>
+                                        </div>
+                                    </div>
+                @if ($type == 'donation')
+                    <div class="row mb-4">
+                        <div class="col-md-2 col-2">
+                            @if ($data->type == 'general')
+                                <img src="{{ asset('/uploads/' . $data->website->user->setting->logo) }}" width="64px"
+                                    style="border-radius: 5px; border: 1px solid #eee;">
+                            @else
+                                <img src="{{ asset('/uploads/' . $data->user->image) }}" width="64px"
+                                    style="border-radius: 5px; border: 1px solid #eee;">
+                            @endif
+                            {{-- <span
+                                style="position: relative; left: 30px; top: -45px; background: #666; padding: 3px 9px; border-radius: 50%; color: #fff;">{{
+                                $item->quantity }}</span> --}}
+                        </div>
+                        <div class="col-md-6 col-6 text-start" style="padding-top: 20px; font-weight: bold;">
+                            @if ($data->type == 'general')
+                                {{ $data->website->name }}
+                            @else
+                                {{ $data->user->name }}
+                            @endif
+                        </div>
+                        <div class="col-md-4 col-4" style="padding-top: 20px; font-weight: bold;">
+                            ${{ number_format($data->amount, 2) }}
+                        </div>
+                    </div>
+                @elseif($type == 'ticket')
+                    @foreach ($data->details as $item)
+                        <div class="row mb-4">
+                            <div class="col-md-2 col-2">
+                                <img src="{{ asset($item->ticket->image) }}" width="64px"
+                                    style="border-radius: 5px; border: 1px solid #eee;">
+                                <span
+                                    style="position: relative; left: 50px; top: -45px; background: #000; padding: 3px 9px; border-radius: 50%; color: #fff;">{{ $item->quantity }}</span>
+                            </div>
+                            <div class="col-md-6 col-6 text-start" style="padding-top: 7px; font-weight: bold;">
+                                {{ $item->ticket->name }}
+                                <p style="font-weight: 400">{{ $item->ticket->description }}</p>
+                            </div>
+                            <div class="col-md-4 col-4" style="padding-top: 20px; font-weight: bold;">
+                                $ {{ number_format($item->amount, 2) }}
+                            </div>
+                        </div>
+                    @endforeach
+                @elseif($type == 'auction')
+
+                    <div class="row mb-4">
+                        <div class="col-md-2 col-2">
+                            <img src="{{ asset('/uploads/'.$data->images[0]->image) }}" width="64px"
+                                style="border-radius: 5px; border: 1px solid #eee;">
+                        </div>
+                        <div class="col-md-6 col-6 text-start" style="padding-top: 7px; font-weight: bold;">
+                            {{ $data->title }}
+                            {!! $data->description !!}
+                        </div>
+                        <div class="col-md-4 col-4" style="padding-top: 20px; font-weight: bold;">
+                            ${{ number_format($data->amount, 2) }}
+                        </div>
+                    </div>
+                @endif
+                                    <div class="p-0 section-title d-flex align-items-center svelte-bty8ba"
+                                        data-testid="open-investment_amount-section" role="button" tabindex="0">
+                                        <div class="mr-2 d-flex align-items-center"><svg width="16" height="16"
+                                                viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path
+                                                    d="M14.6667 7.3904V8.00373C14.6658 9.44135 14.2003 10.8402 13.3396 11.9916C12.4788 13.1431 11.2689 13.9854 9.89024 14.393C8.51162 14.8006 7.03817 14.7517 5.68965 14.2535C4.34112 13.7552 3.18977 12.8345 2.40731 11.6284C1.62484 10.4224 1.25319 8.99578 1.34778 7.56128C1.44237 6.12678 1.99814 4.76129 2.93219 3.66845C3.86623 2.57561 5.12852 1.81399 6.53079 1.49717C7.93306 1.18034 9.40018 1.32529 10.7133 1.9104M14.6667 2.66659L8 9.33992L6 7.33992"
+                                                    stroke="#027A48" stroke-width="1.5" stroke-linecap="round"
+                                                    stroke-linejoin="round"></path>
+                                            </svg></div>
+                                        <p class="m-0">1. Amount</p>
+                                        {{-- <div class="last-item svelte-bty8ba" onclick="showamount()"><svg width="13"
+                                                height="8" viewBox="0 0 13 8" fill="none"
+                                                xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M1.5 1.5L6.5 6.5L11.5 1.5" stroke="#667085" stroke-width="1.66667"
+                                                    stroke-linecap="round" stroke-linejoin="round"></path>
+                                            </svg></div> --}}
+                                    </div>
+                                    <div class="component svelte-bty8ba amount-open">
+                                        <div data-testid="container-investment_amount-section">
+                                            <div data-testid="slide-wrapper">
+                                                <div class="closed-state pt-3 svelte-1mxd9nk"
+                                                    data-testid="investment_amount-closed-state" role="button" tabindex="0">
+                                                    <div class="row mb-1">
+                                                        <div class="col-6">Amount</div>
+                                                        <div class="col-6 text-right svelte-1mxd9nk"
+                                                            data-testid="dollar-mask">
+                                                            ${{ number_format($data->amount, 2) }}</div>
+                                                    </div>
+                                                    <div class="row mt-1">
+                                                        <div class="col-6">Processing Fee</div>
+                                                        <div class="col-6 text-right svelte-1mxd9nk"><span
+                                                                data-testid="current-quantity">${{ number_format((($data->amount / 100) * $payment->fee), 2) }}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {{-- <div class="component svelte-bty8ba amount-closed">
+                                        <div data-testid="container-investment_amount-section">
+                                            <div data-testid="slide-wrapper" style="">
+                                                <div class="row" data-testid="investment_amount-opened-state">
+                                                    <div class="col-12 d-flex pb-2 pt-3 ml-1"><svg width="16.67"
+                                                            height="16.67" viewBox="0 0 20 20" fill="none"
+                                                            xmlns="http://www.w3.org/2000/svg">
+                                                            <path
+                                                                d="M8.41747 3.33341C9.46959 2.30243 10.9105 1.66675 12.5 1.66675C15.7216 1.66675 18.3333 4.27842 18.3333 7.50008C18.3333 9.08953 17.6976 10.5305 16.6666 11.5826M13.3333 12.5001C13.3333 15.7217 10.7216 18.3334 7.49996 18.3334C4.2783 18.3334 1.66663 15.7217 1.66663 12.5001C1.66663 9.27842 4.2783 6.66675 7.49996 6.66675C10.7216 6.66675 13.3333 9.27842 13.3333 12.5001Z"
+                                                                stroke="#475467" stroke-width="1.5" stroke-linecap="round"
+                                                                stroke-linejoin="round"></path>
+                                                        </svg>
+                                                        <p class="ml-1 my-0 text-explanation"
+                                                            data-testid="calculation-text-explanation">1 Preferred Stock =
+                                                            $2.13
+                                                            USD</p>
+                                                    </div>
+                                                    <div class="col-12 mb-1">
+                                                        <div class="mt-2 mb-3" data-testid="amount-form">
+                                                            <div class="label svelte-emh1ve">Amount will be
+                                                                rounded
+                                                                down if required</div>
+                                                            <div class="input-container mb-3 svelte-g2297j">
+                                                                <div class="main-container">
+                                                                    <div class="input-container"><span
+                                                                            class="input-side-section svelte-s1cjfy">USD</span>
+                                                                        <form id="" class=" svelte-12gz36q"
+                                                                            data-testid="form-">
+                                                                            <div class="center svelte-ofy4ub"> <input
+                                                                                    type="text" id="money-container"
+                                                                                    name="money-container"
+                                                                                    class="form-control svelte-eq3jxk"
+                                                                                    placeholder="Minimum $1,001.10"
+                                                                                    autocomplete="on"
+                                                                                    data-testid="input-money-container"
+                                                                                    slot="input" unmask="true"
+                                                                                    imaskoptions="[object Object]"
+                                                                                    containerclass="center"
+                                                                                    newlayout="false" label="" helptext="">
+                                                                                <div class="tooltip-wrapper svelte-eq3jxk"
+                                                                                    slot="tooltip"></div>
+                                                                            </div>
+                                                                        </form>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="input-container svelte-g2297j">
+                                                                <div class="main-container">
+                                                                    <div class="input-container"><span
+                                                                            class="input-side-section">Quantity</span>
+                                                                        <form id="" class=" svelte-12gz36q"
+                                                                            data-testid="form-">
+                                                                            <div class="center svelte-ofy4ub"> <input
+                                                                                    type="text" id="securities-container"
+                                                                                    name="securities-container"
+                                                                                    class="form-control svelte-eq3jxk"
+                                                                                    placeholder="Minimum 47 Preferred Stock"
+                                                                                    autocomplete="on"
+                                                                                    data-testid="input-securities-container"
+                                                                                    slot="input" unmask="true"
+                                                                                    imaskoptions="[object Object]"
+                                                                                    containerclass="center"
+                                                                                    newlayout="false">
+                                                                                <div class="tooltip-wrapper svelte-eq3jxk"
+                                                                                    slot="tooltip"></div>
+                                                                            </div>
+                                                                        </form>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="mt-4" data-testid="incentive-banner"></div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-12 pb-4"><button type="submit"
+                                                            id="investment_amount-finish"
+                                                            class="btn btn btn-primary btn-lg btn-block submit-button svelte-1d88ver"
+                                                            data-testid="button-investment_amount-finish"><span
+                                                                data-testid="button-investment_amount-finish-content-wrapper">
+                                                                Continue</span></button></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div> --}}
+                                </div>
+                                <div class="py-2 section-item svelte-awum1m" id="contact_information"
+                                    data-testid="contact_information-section">
+                                    <div class="p-0 section-title d-flex align-items-center svelte-bty8ba"
+                                        data-testid="open-contact_information-section" role="button" tabindex="0">
+                                        <div class="mr-2 d-flex align-items-center"><svg width="16" height="16"
+                                                viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path
+                                                    d="M14.6667 7.3904V8.00373C14.6658 9.44135 14.2003 10.8402 13.3396 11.9916C12.4788 13.1431 11.2689 13.9854 9.89024 14.393C8.51162 14.8006 7.03817 14.7517 5.68965 14.2535C4.34112 13.7552 3.18977 12.8345 2.40731 11.6284C1.62484 10.4224 1.25319 8.99578 1.34778 7.56128C1.44237 6.12678 1.99814 4.76129 2.93219 3.66845C3.86623 2.57561 5.12852 1.81399 6.53079 1.49717C7.93306 1.18034 9.40018 1.32529 10.7133 1.9104M14.6667 2.66659L8 9.33992L6 7.33992"
+                                                    stroke="#027A48" stroke-width="1.5" stroke-linecap="round"
+                                                    stroke-linejoin="round"></path>
+                                            </svg></div>
+                                        <p class="m-0">2. Contact Information</p>
+                                        <div class="last-item svelte-bty8ba" onclick="showcontact()"><svg width="13"
+                                                height="8" viewBox="0 0 13 8" fill="none"
+                                                xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M1.5 1.5L6.5 6.5L11.5 1.5" stroke="#667085" stroke-width="1.66667"
+                                                    stroke-linecap="round" stroke-linejoin="round"></path>
+                                            </svg></div>
+                                    </div>
+                                    <div class="component svelte-bty8ba contact-open">
+                                        <div data-testid="contact-information-section"
+                                            class="svelte-jt25wt contact-information-section">
+                                            <div data-testid="slide-wrapper" style="">
+                                                <div class="row">
+                                                    <div class="col-12 py-3">
+                                                        {{-- <div data-testid="profile-list">
+                                                            <form id="select-profile-form" class=" svelte-12gz36q"
+                                                                data-testid="form-select-profile-form">
+                                                                <div class="label svelte-1ug9407">Investing as</div>
+                                                                <div class="form-group flex-grow-1 svelte-bo62tj">
+                                                                    <div
+                                                                        class="select-wrapper select-285 svelte-bo62tj newLayout">
+                                                                        <div class="select svelte-bo62tj"><input
+                                                                                name="profile" type="hidden"
+                                                                                class="svelte-bo62tj" value="">
+                                                                            <input type="text" id="profile"
+                                                                                placeholder="Select profile"
+                                                                                autocomplete="off"
+                                                                                class="form-control select-input text-truncate undefined svelte-bo62tj newLayout"
+                                                                                readonly="" data-testid="select-profile">
+                                                                        </div>
+                                                                        <div class="append svelte-bo62tj">
+                                                                            <div data-testid="append-arrow-icon"
+                                                                                class="svelte-bo62tj"><svg width="13"
+                                                                                    height="8" viewBox="0 0 13 8"
+                                                                                    fill="none"
+                                                                                    xmlns="http://www.w3.org/2000/svg">
+                                                                                    <path d="M1.5 1.5L6.5 6.5L11.5 1.5"
+                                                                                        stroke="#667085"
+                                                                                        stroke-width="1.66667"
+                                                                                        stroke-linecap="round"
+                                                                                        stroke-linejoin="round"></path>
+                                                                                </svg></div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="text-danger" data-testid="error-message">
+                                                                    </div>
+                                                                </div>
+                                                            </form>
+                                                        </div>
+                                                        <div class="select-entity svelte-zsink7"
+                                                            data-testid="select-entity-container">
+                                                            <div class="row">
+                                                                <div class="pick-investor-type col-12 svelte-zsink7">
+                                                                    <div class="label svelte-zsink7">Who is making the
+                                                                        investment?</div> <span
+                                                                        class="custom-tooltip svelte-1chor6s"
+                                                                        data-testid="tooltip-box" tabindex="0"
+                                                                        data-tooltip-position="bottom">
+                                                                        <div data-testid="tooltip-slot"><svg width="16"
+                                                                                height="16" viewBox="0 0 16 16" fill="none"
+                                                                                xmlns="http://www.w3.org/2000/svg"
+                                                                                class="svelte-17yrigp">
+                                                                                <path
+                                                                                    d="M6.06004 6C6.21678 5.55445 6.52614 5.17874 6.93334 4.93942C7.34055 4.70011 7.8193 4.61263 8.28483 4.69247C8.75035 4.77232 9.17259 5.01435 9.47676 5.37569C9.78093 5.73702 9.94741 6.19435 9.94671 6.66667C9.94671 8 7.94671 8.66667 7.94671 8.66667M8.00004 11.3333H8.00671M14.6667 8C14.6667 11.6819 11.6819 14.6667 8.00004 14.6667C4.31814 14.6667 1.33337 11.6819 1.33337 8C1.33337 4.3181 4.31814 1.33333 8.00004 1.33333C11.6819 1.33333 14.6667 4.3181 14.6667 8Z"
+                                                                                    stroke="#98A2B3" stroke-width="1.33333"
+                                                                                    stroke-linecap="round"
+                                                                                    stroke-linejoin="round"></path>
+                                                                            </svg></div>
+                                                                        <div class="tooltip-text svelte-1chor6s"
+                                                                            role="tooltip">
+                                                                            If the purchase is for the individual investing,
+                                                                            select "Myself/an individual". If the purchase
+                                                                            is
+                                                                            being made with another person, select "Joint".
+                                                                            If
+                                                                            the purchase is being made by a company, limited
+                                                                            partnership, syndicate, or unincorporated
+                                                                            organization, select "Corporation". If the
+                                                                            purchase
+                                                                            is being made using an IRA, choose "IRA". Please
+                                                                            confirm with Gin &amp; Luck, Inc. that this
+                                                                            offering
+                                                                            supports IRAs.</div>
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                            <form id="" class=" svelte-12gz36q" data-testid="form-">
+                                                                <div class="form-group flex-grow-1 svelte-bo62tj">
+                                                                    <div
+                                                                        class="select-wrapper select-351 svelte-bo62tj newLayout">
+                                                                        <div class="select svelte-bo62tj"><input
+                                                                                name="entityType" type="hidden"
+                                                                                class="svelte-bo62tj" value="individual">
+                                                                            <input type="text" id="entityType"
+                                                                                placeholder="Select an investor type"
+                                                                                autocomplete="off"
+                                                                                class="form-control select-input text-truncate undefined svelte-bo62tj newLayout"
+                                                                                readonly="" data-testid="select-entityType">
+                                                                        </div>
+                                                                        <div class="append svelte-bo62tj">
+                                                                            <div data-testid="append-arrow-icon"
+                                                                                class="svelte-bo62tj"><svg width="13"
+                                                                                    height="8" viewBox="0 0 13 8"
+                                                                                    fill="none"
+                                                                                    xmlns="http://www.w3.org/2000/svg">
+                                                                                    <path d="M1.5 1.5L6.5 6.5L11.5 1.5"
+                                                                                        stroke="#667085"
+                                                                                        stroke-width="1.66667"
+                                                                                        stroke-linecap="round"
+                                                                                        stroke-linejoin="round"></path>
+                                                                                </svg></div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="text-danger" data-testid="error-message">
+                                                                    </div>
+                                                                </div>
+                                                            </form>
+                                                        </div> --}}
+                                                        <div data-testid="individual-profile-form-container">
+                                                            <div class="investor-profile-form svelte-46w2a2">
+                                                                {{-- <form id="individual-profile-form" class=" svelte-12gz36q"
+                                                                    data-testid="form-individual-profile-form"> --}}
+                                                                    <div class="form-group svelte-46w2a2">
+                                                                        <div class="line-separator svelte-46w2a2"
+                                                                            data-testid="line-separator"></div>
+                                                                        <div class="d-flex name-fields svelte-46w2a2">
+                                                                            <div
+                                                                                class="flex-grow-1 form-group svelte-ofy4ub newLayout">
+                                                                                <input id="firstName" name="first_name"
+                                                                                    class="form-control undefined
+            input svelte-ofy4ub" placeholder="First name *" data-testid="input-firstName" autocomplete="given-name"
+                                                                                    inputmode="text" type="text"
+                                                                                    value="{{ $data->first_name ?? ''}}" required>
+                                                                            </div>
+                                                                            <div
+                                                                                class="flex-grow-1 form-group svelte-ofy4ub newLayout">
+                                                                                <input id="lastName" name="last_name" class="form-control undefined
+            input svelte-ofy4ub" placeholder="Last name *" data-testid="input-lastName" autocomplete="family-name"
+                                                                                    inputmode="text" type="text"
+                                                                                    value="{{ $data->last_name ?? ''}}" required>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div data-testid="address-inputs"
+                                                                            class=" svelte-fvm7yg">
+                                                                            <div
+                                                                                class="form-group input-group svelte-ofy4ub newLayout">
+                                                                                <input id="addressLine1" name="address"
+                                                                                    class="form-control undefined input svelte-ofy4ub pac-target-input"
+                                                                                    placeholder="Address"
+                                                                                    data-testid="input-addressLine1"
+                                                                                    autocomplete="off" inputmode="text"
+                                                                                    type="text" required>
+                                                                                {{-- <div
+                                                                                    class="tooltip-wrapper svelte-fvm7yg"
+                                                                                    slot="tooltip"><span
+                                                                                        class="custom-tooltip svelte-1chor6s"
+                                                                                        data-testid="addressLine1-tooltip-box"
+                                                                                        tabindex="0"
+                                                                                        data-tooltip-position="left">
+                                                                                        <div data-testid="tooltip-slot">
+                                                                                            <span class="ml-1"><svg
+                                                                                                    width="16" height="16"
+                                                                                                    viewBox="0 0 16 16"
+                                                                                                    fill="none"
+                                                                                                    xmlns="http://www.w3.org/2000/svg"
+                                                                                                    class="svelte-17yrigp">
+                                                                                                    <path
+                                                                                                        d="M6.06004 6C6.21678 5.55445 6.52614 5.17874 6.93334 4.93942C7.34055 4.70011 7.8193 4.61263 8.28483 4.69247C8.75035 4.77232 9.17259 5.01435 9.47676 5.37569C9.78093 5.73702 9.94741 6.19435 9.94671 6.66667C9.94671 8 7.94671 8.66667 7.94671 8.66667M8.00004 11.3333H8.00671M14.6667 8C14.6667 11.6819 11.6819 14.6667 8.00004 14.6667C4.31814 14.6667 1.33337 11.6819 1.33337 8C1.33337 4.3181 4.31814 1.33333 8.00004 1.33333C11.6819 1.33333 14.6667 4.3181 14.6667 8Z"
+                                                                                                        stroke="#98A2B3"
+                                                                                                        stroke-width="1.33333"
+                                                                                                        stroke-linecap="round"
+                                                                                                        stroke-linejoin="round">
+                                                                                                    </path>
+                                                                                                </svg></span>
+                                                                                        </div>
+                                                                                        <div class="tooltip-text svelte-1chor6s"
+                                                                                            role="tooltip">For compliance
+                                                                                            purposes, PO Box cannot be
+                                                                                            accepted
+                                                                                            as an address.</div>
+                                                                                    </span></div> --}}
+                                                                            </div>
+                                                                            <div class="form-group svelte-ofy4ub newLayout">
+                                                                                <input id="addressLine2" name="apartment"
+                                                                                    class="form-control undefined
+            input svelte-ofy4ub" placeholder="Apartment, suite, etc. (optional)" data-testid="input-addressLine2"
+                                                                                    autocomplete="address-line2"
+                                                                                    inputmode="text" type="text">
+                                                                            </div>
+                                                                            <div class="form-group svelte-1movnxs">
+                                                                                <div
+                                                                                    class="form-group flex-grow-1 svelte-bo62tj">
+                                                                                    <div
+                                                                                        class="select-wrapper select-537 svelte-bo62tj newLayout form-floating">
+                                                                                        <div class="select svelte-bo62tj">
+                                                                                            <select class="form-select"
+                                                                                                name="country" id="country"
+                                                                                                required
+                                                                                                aria-label="Country/Region">
+                                                                                                <option value="" disabled
+                                                                                                    selected hidden>
+                                                                                                </option>
+                                                                                            </select>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div class="text-danger"
+                                                                                        data-testid="error-message"></div>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="form-group svelte-1movnxs">
+                                                                                <div
+                                                                                    class="form-group flex-grow-1 svelte-bo62tj">
+                                                                                    <div
+                                                                                        class="select-wrapper select-960 svelte-bo62tj newLayout">
+                                                                                        <div
+                                                                                            class="select svelte-bo62tj form-floating">
+                                                                                            <select class="form-select"
+                                                                                                name="state" id="state"
+                                                                                                required aria-label="State"
+                                                                                                style="padding: 0px; min-height: 44px; max-height: 44px; padding-left: 12px;">
+                                                                                                <option value="" disabled
+                                                                                                    selected hidden>Select
+                                                                                                    State</option>
+                                                                                            </select>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div class="text-danger"
+                                                                                        data-testid="error-message"></div>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="form-group svelte-ofy4ub newLayout">
+                                                                                <input id="city" name="city" id="city"
+                                                                                    class="form-control undefined
+            input svelte-ofy4ub" placeholder="City" data-testid="input-city" autocomplete="address-level2" inputmode="text"
+                                                                                    type="text" required>
+                                                                            </div>
+                                                                            <div class="form-group svelte-ofy4ub newLayout">
+                                                                                <input id="zipcode" name="postalCode" class="form-control undefined
+            input svelte-ofy4ub" placeholder="ZIP code" data-testid="input-postalCode" autocomplete="postal-code"
+                                                                                    inputmode="text" type="text" required>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div
+                                                                        class="form-group second-form-container svelte-46w2a2">
+                                                                        <div class="form-group svelte-46w2a2">
+                                                                            <div class="phone-input svelte-1ropzx2"
+                                                                                data-testid="phone-input">
+                                                                                <div
+                                                                                    class="form-group svelte-ofy4ub newLayout">
+                                                                                    <div slot="input"
+                                                                                        class="svelte-1ropzx2 newLayout">
+                                                                                        <input id="phone" name="phone"
+                                                                                            hidden=""
+
+                                                                                            class="svelte-1ropzx2">
+                                                                                    </div>
+                                                                                    <div class="tooltip-wrapper svelte-1ropzx2"
+                                                                                        slot="tooltip"></div>
+                                                                                </div>
+                                                                            </div>
+                                                                            {{-- <div
+                                                                                class="custom-input-group svelte-46w2a2">
+                                                                                <div class="main-container"
+                                                                                    data-testid="date-new-field">
+                                                                                    <div
+                                                                                        class="date-container svelte-1i73989">
+                                                                                        <div
+                                                                                            class="form-group input-group dob-center svelte-1efy71u newLayout">
+                                                                                            <label for="dateOfBirth"
+                                                                                                class="input-group-prepend input-group-text svelte-1efy71u newLayout">Date
+                                                                                                of birth *</label> <input
+                                                                                                type="text" id="dateOfBirth"
+                                                                                                name="dateOfBirth"
+                                                                                                class="form-control form-control svelte-1htp85p"
+                                                                                                placeholder="YYYY-MM-DD"
+                                                                                                autocomplete="bday"
+                                                                                                data-testid="input-dateOfBirth"
+                                                                                                slot="input">
+                                                                                            <div class="tooltip-wrapper svelte-1htp85p"
+                                                                                                slot="tooltip"></div>
+                                                                                            <div style="display: none;">
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div> --}}
+                                                                        </div>
+                                                                        {{-- <div class="form-group mt-0 svelte-46w2a2">
+                                                                            <div class="custom-input-group svelte-6up9l6">
+                                                                                <div>
+                                                                                    <div class="tin-text svelte-13la63g"
+                                                                                        data-testid="container-tin-text">
+                                                                                        <div class="svelte-13la63g"><svg
+                                                                                                width="45" height="55"
+                                                                                                viewBox="0 0 18 22"
+                                                                                                fill="none"
+                                                                                                xmlns="http://www.w3.org/2000/svg">
+                                                                                                <path
+                                                                                                    d="M6 10.5001L8 12.5001L12.5 8.00011M17 11.0001C17 15.9086 11.646 19.4785 9.69799 20.615C9.4766 20.7442 9.3659 20.8087 9.20968 20.8422C9.08844 20.8682 8.91156 20.8682 8.79032 20.8422C8.6341 20.8087 8.5234 20.7442 8.30201 20.615C6.35396 19.4785 1 15.9086 1 11.0001V6.21772C1 5.4182 1 5.01845 1.13076 4.67482C1.24627 4.37126 1.43398 4.10039 1.67766 3.88564C1.9535 3.64255 2.3278 3.50219 3.0764 3.22146L8.4382 1.21079C8.6461 1.13283 8.75005 1.09385 8.85698 1.07839C8.95184 1.06469 9.04816 1.06469 9.14302 1.07839C9.24995 1.09385 9.3539 1.13283 9.5618 1.21079L14.9236 3.22146C15.6722 3.50219 16.0465 3.64255 16.3223 3.88564C16.566 4.10039 16.7537 4.37126 16.8692 4.67482C17 5.01845 17 5.4182 17 6.21772V11.0001Z"
+                                                                                                    stroke="#667085"
+                                                                                                    stroke-width="1"
+                                                                                                    stroke-linecap="round"
+                                                                                                    stroke-linejoin="round">
+                                                                                                </path>
+                                                                                            </svg></div>
+                                                                                        <div data-testid="tin-text"
+                                                                                            class="svelte-13la63g">All
+                                                                                            information is privately sent
+                                                                                            and
+                                                                                            stored using highly secure
+                                                                                            methods
+                                                                                            (AES-256 encryption) and will be
+                                                                                            used for documentation
+                                                                                            completion
+                                                                                            and
+                                                                                            identity verification.</div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div> --}}
+                                                                    </div> <input type="hidden" name="email"
+                                                                        value="{{ $data->email ?? ''}}">
+                                                                    <div class="alert-container svelte-jt25wt"
+                                                                        slot="localAlert"></div>
+                                                                {{-- </form> --}}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {{-- <div class="py-2 section-item svelte-awum1m" id="investor_confirmation"
+                                    data-testid="investor_confirmation-section">
+                                    <div class="p-0 section-title d-flex align-items-center svelte-bty8ba"
+                                        data-testid="open-investor_confirmation-section" role="button" tabindex="0">
+                                        <div class="mr-2 d-flex align-items-center" style=""><svg width="16" height="16"
+                                                viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path
+                                                    d="M14.6667 7.3904V8.00373C14.6658 9.44135 14.2003 10.8402 13.3396 11.9916C12.4788 13.1431 11.2689 13.9854 9.89024 14.393C8.51162 14.8006 7.03817 14.7517 5.68965 14.2535C4.34112 13.7552 3.18977 12.8345 2.40731 11.6284C1.62484 10.4224 1.25319 8.99578 1.34778 7.56128C1.44237 6.12678 1.99814 4.76129 2.93219 3.66845C3.86623 2.57561 5.12852 1.81399 6.53079 1.49717C7.93306 1.18034 9.40018 1.32529 10.7133 1.9104M14.6667 2.66659L8 9.33992L6 7.33992"
+                                                    stroke="#027A48" stroke-width="1.5" stroke-linecap="round"
+                                                    stroke-linejoin="round"></path>
+                                            </svg></div>
+                                        <p class="m-0">3. Investor Confirmation</p>
+                                        <div class="last-item svelte-bty8ba" onclick="showconfirm()"><svg width="13"
+                                                height="8" viewBox="0 0 13 8" fill="none"
+                                                xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M1.5 1.5L6.5 6.5L11.5 1.5" stroke="#667085" stroke-width="1.66667"
+                                                    stroke-linecap="round" stroke-linejoin="round"></path>
+                                            </svg></div>
+                                    </div>
+                                    <div class="component svelte-bty8ba confirm-open">
+                                        <div data-testid="slide-wrapper">
+                                            <div class="accredited-container svelte-1alt5hh"
+                                                data-testid="completed-container" role="button" tabindex="0"><span
+                                                    class="container-text svelte-1alt5hh">Investor
+                                                    status</span>
+                                                <div class="complete-badge svelte-1alt5hh">Completed</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="component svelte-bty8ba confirm-closed">
+                                        <div data-testid="slide-wrapper" style="">
+                                            <div class="investor-confirmation">
+                                                <div class="accreditation-text accreditation-description svelte-9099kz">
+                                                    <div class="accreditation-text-title svelte-9099kz">US Compliance</div>
+                                                    Please select one:
+                                                </div>
+                                                <form id="" class=" svelte-12gz36q" data-testid="form-">
+                                                    <div class="initial-options">
+                                                        <div class="radio-container svelte-9099kz">
+                                                            <div class="form-group my-0 svelte-195po96">
+                                                                <div class="form-check" tabindex="0"
+                                                                    data-testid="input-accreditedInvestor-accredited-box"
+                                                                    role="button"><input type="radio" value="accredited"
+                                                                        name="accreditedInvestor" id="accredited-radio"
+                                                                        class="form-check-input" required=""
+                                                                        data-testid="input-accreditedInvestor-accredited">
+                                                                    <label for="accredited-radio"
+                                                                        class="form-check-label svelte-195po96">Investor
+                                                                        meets
+                                                                        the definition of “accredited investor”</label>
+                                                                    <div class="form-check-description svelte-195po96">
+                                                                    </div>
+                                                                </div>
+                                                                <div class="text-danger" data-testid="error-message"></div>
+                                                            </div> <span class="custom-tooltip svelte-1chor6s"
+                                                                data-testid="tooltip-box" tabindex="0"
+                                                                data-tooltip-position="bottom-right">
+                                                                <div data-testid="tooltip-slot"><svg width="16" height="16"
+                                                                        viewBox="0 0 16 16" fill="none"
+                                                                        xmlns="http://www.w3.org/2000/svg"
+                                                                        class="svelte-17yrigp">
+                                                                        <path
+                                                                            d="M6.06004 6C6.21678 5.55445 6.52614 5.17874 6.93334 4.93942C7.34055 4.70011 7.8193 4.61263 8.28483 4.69247C8.75035 4.77232 9.17259 5.01435 9.47676 5.37569C9.78093 5.73702 9.94741 6.19435 9.94671 6.66667C9.94671 8 7.94671 8.66667 7.94671 8.66667M8.00004 11.3333H8.00671M14.6667 8C14.6667 11.6819 11.6819 14.6667 8.00004 14.6667C4.31814 14.6667 1.33337 11.6819 1.33337 8C1.33337 4.3181 4.31814 1.33333 8.00004 1.33333C11.6819 1.33333 14.6667 4.3181 14.6667 8Z"
+                                                                            stroke="#98A2B3" stroke-width="1.33333"
+                                                                            stroke-linecap="round" stroke-linejoin="round">
+                                                                        </path>
+                                                                    </svg></div>
+                                                            </span>
+                                                        </div>
+                                                        <div class="radio-container svelte-9099kz">
+                                                            <div class="form-group my-0 svelte-195po96">
+                                                                <div class="form-check" tabindex="0"
+                                                                    data-testid="input-accreditedInvestor-not_accredited-box"
+                                                                    role="button"><input type="radio" value="not_accredited"
+                                                                        name="accreditedInvestor" id="not_accredited-radio"
+                                                                        class="form-check-input" required=""
+                                                                        data-testid="input-accreditedInvestor-not_accredited">
+                                                                    <label for="not_accredited-radio"
+                                                                        class="form-check-label svelte-195po96">Investor
+                                                                        does
+                                                                        not meet the definition of “accredited Investor”
+                                                                        <strong>or</strong> is not sure</label>
+                                                                    <div class="form-check-description svelte-195po96">
+                                                                    </div>
+                                                                </div>
+                                                                <div class="text-danger" data-testid="error-message"></div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div data-testid="slide-wrapper">
+                                                        <div class="notice-container svelte-9099kz">
+                                                            <div class="accreditation-text accreditation-text--tooltip svelte-9099kz"
+                                                                data-testid="not-accredited-tooltip">By clicking Continue,
+                                                                the
+                                                                investor confirms they are within
+                                                                their investment limit</div> <span
+                                                                class="custom-tooltip svelte-1chor6s"
+                                                                data-testid="tooltip-box" tabindex="0"
+                                                                data-tooltip-position="bottom-right">
+                                                                <div data-testid="tooltip-slot"><svg width="16" height="16"
+                                                                        viewBox="0 0 16 16" fill="none"
+                                                                        xmlns="http://www.w3.org/2000/svg"
+                                                                        class="svelte-17yrigp">
+                                                                        <path
+                                                                            d="M6.06004 6C6.21678 5.55445 6.52614 5.17874 6.93334 4.93942C7.34055 4.70011 7.8193 4.61263 8.28483 4.69247C8.75035 4.77232 9.17259 5.01435 9.47676 5.37569C9.78093 5.73702 9.94741 6.19435 9.94671 6.66667C9.94671 8 7.94671 8.66667 7.94671 8.66667M8.00004 11.3333H8.00671M14.6667 8C14.6667 11.6819 11.6819 14.6667 8.00004 14.6667C4.31814 14.6667 1.33337 11.6819 1.33337 8C1.33337 4.3181 4.31814 1.33333 8.00004 1.33333C11.6819 1.33333 14.6667 4.3181 14.6667 8Z"
+                                                                            stroke="#98A2B3" stroke-width="1.33333"
+                                                                            stroke-linecap="round" stroke-linejoin="round">
+                                                                        </path>
+                                                                    </svg></div>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="continue-container svelte-9099kz"> <button type="submit"
+                                                            id="continue-button"
+                                                            class="btn btn btn-primary btn-lg btn-block submit-button svelte-1d88ver"
+                                                            data-testid="button-continue-button"><span
+                                                                data-testid="button-continue-button-content-wrapper">
+                                                                Continue
+                                                            </span></button></div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div> --}}
+                                <div class="py-2 section-item svelte-awum1m" id="payment" data-testid="payment-section">
+                                    <div class="p-0 section-title d-flex align-items-center svelte-bty8ba"
+                                        data-testid="open-payment-section" role="button" tabindex="0">
+                                        <p class="m-0">3. Payment</p>
+                                        <div class="last-item svelte-bty8ba" onclick="showpayment()"><svg width="13"
+                                                height="8" viewBox="0 0 13 8" fill="none"
+                                                xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M1.5 1.5L6.5 6.5L11.5 1.5" stroke="#667085" stroke-width="1.66667"
+                                                    stroke-linecap="round" stroke-linejoin="round"></path>
+                                            </svg></div>
+                                    </div>
+                                    <div class="component svelte-bty8ba"></div>
+                                    <div class="component svelte-bty8ba payment-open">
+                                        <div data-testid="slide-wrapper" style="">
+                                            <div class="d-flex flex-column" data-testid="payment-container">
+                                                <div class="alerts-container svelte-q9q5rk"></div>
+                                                <div class="information-section section svelte-q9q5rk">
+                                                    <div class="information-row svelte-q9q5rk"><span>Subtotal</span> <span
+                                                            class="information-value svelte-q9q5rk">${{ number_format($data->amount, 2) }}</span>
+                                                    </div>
+                                                    <div class="information-row svelte-q9q5rk">
+                                                        <div><span>Processing Fee</span> <span
+                                                                class="custom-tooltip svelte-1chor6s"
+                                                                data-testid="tooltip-box" tabindex="0"
+                                                                data-tooltip-position="bottom">
+                                                            </span></div> <span
+                                                            class="information-value svelte-q9q5rk">${{ number_format((($data->amount / 100) * $payment->fee), 2) }}</span>
+                                                    </div>
+                                                    <div class="information-row svelte-q9q5rk"><span>Total</span> <span
+                                                            class="information-value svelte-q9q5rk">${{ number_format($data->amount + (($data->amount / 100) * $payment->fee), 2) }}</span>
+                                                    </div>
+                                                </div>
+                                                <div class="section mb-4 svelte-q9q5rk">
+                                                    {{-- <div class="ach-v2-payment-container"
+                                                        data-testid="ach-v2-payment-component">
+                                                        <div class="payment-method svelte-brht2z"
+                                                            data-testid="bank-to-bank-us-payment-method" role="button"
+                                                            tabindex="0">
+                                                            <div><input type="radio" name="selected-method"
+                                                                    id="bank-to-bank-us"> <span
+                                                                    class="title svelte-brht2z">Bank-to-Bank Transfer
+                                                                    (US)</span> <span
+                                                                    class="estimated-arrival svelte-brht2z">3-5 business
+                                                                    days</span></div>
+                                                            <div slot="icons" class="bank-icon"><svg width="20" height="20"
+                                                                    viewBox="0 0 20 20" fill="none"
+                                                                    xmlns="http://www.w3.org/2000/svg">
+                                                                    <path
+                                                                        d="M3 7.00002V15M7.5 7.00002V15M12.5 7.00002V15M17 7.00002V15M1 16.6L1 17.4C1 17.9601 1 18.2401 1.10899 18.454C1.20487 18.6422 1.35785 18.7952 1.54601 18.891C1.75992 19 2.03995 19 2.6 19H17.4C17.9601 19 18.2401 19 18.454 18.891C18.6422 18.7952 18.7951 18.6422 18.891 18.454C19 18.2401 19 17.9601 19 17.4V16.6C19 16.04 19 15.7599 18.891 15.546C18.7951 15.3579 18.6422 15.2049 18.454 15.109C18.2401 15 17.9601 15 17.4 15H2.6C2.03995 15 1.75992 15 1.54601 15.109C1.35785 15.2049 1.20487 15.3579 1.10899 15.546C1 15.7599 1 16.04 1 16.6ZM9.65291 1.07715L2.25291 2.7216C1.80585 2.82094 1.58232 2.87062 1.41546 2.99082C1.26829 3.09685 1.15273 3.24092 1.08115 3.40759C1 3.59654 1 3.82553 1 4.28349L1 5.40002C1 5.96007 1 6.2401 1.10899 6.45401C1.20487 6.64217 1.35785 6.79515 1.54601 6.89103C1.75992 7.00002 2.03995 7.00002 2.6 7.00002H17.4C17.9601 7.00002 18.2401 7.00002 18.454 6.89103C18.6422 6.79515 18.7951 6.64217 18.891 6.45401C19 6.2401 19 5.96007 19 5.40002V4.2835C19 3.82553 19 3.59655 18.9188 3.40759C18.8473 3.24092 18.7317 3.09685 18.5845 2.99082C18.4177 2.87062 18.1942 2.82094 17.7471 2.7216L10.3471 1.07715C10.2176 1.04837 10.1528 1.03398 10.0874 1.02824C10.0292 1.02314 9.97077 1.02314 9.91264 1.02824C9.8472 1.03398 9.78244 1.04837 9.65291 1.07715Z"
+                                                                        stroke="#101828" stroke-width="2"
+                                                                        stroke-linecap="round" stroke-linejoin="round">
+                                                                    </path>
+                                                                </svg></div>
+                                                        </div>
+                                                    </div> --}}
+                                                    <div class="card-payment-container"
+                                                        data-testid="card-payment-component">
+                                                        <div class="payment-method svelte-brht2z"
+                                                            data-testid="card-payment-payment-method" role="button"
+                                                            tabindex="0">
+                                                            <div style="display: flex"><input type="radio" name="selected-method"
+                                                                    id="card-payment" checked>
+                                                                <span class="title svelte-brht2z" style="margin-top: 10px;">Card Payment</span>
+                                                            </div>
+                                                            <div slot="icons"
+                                                                class="card-payment-icons-container svelte-16y3qk">
+                                                                <div class="card-payment-apple svelte-16y3qk"><svg
+                                                                        version="1.1" id="Artwork"
+                                                                        xmlns="http://www.w3.org/2000/svg"
+                                                                        xmlns:xlink="http://www.w3.org/1999/xlink" x="0px"
+                                                                        y="0px" width="165.52107px" height="105.9651px"
+                                                                        viewBox="0 0 165.52107 105.9651"
+                                                                        enable-background="new 0 0 165.52107 105.9651"
+                                                                        xml:space="preserve">
+                                                                        <g>
+                                                                            <path id="XMLID_4_" d="M150.69807,0H14.82318c-0.5659,0-1.1328,0-1.69769,0.0033c-0.47751,0.0034-0.95391,0.0087-1.43031,0.0217
+        c-1.039,0.0281-2.0869,0.0894-3.1129,0.2738c-1.0424,0.1876-2.0124,0.4936-2.9587,0.9754
+        c-0.9303,0.4731-1.782,1.0919-2.52009,1.8303c-0.73841,0.7384-1.35721,1.5887-1.83021,2.52
+        c-0.4819,0.9463-0.7881,1.9166-0.9744,2.9598c-0.18539,1.0263-0.2471,2.074-0.2751,3.1119
+        c-0.0128,0.4764-0.01829,0.9528-0.0214,1.4291c-0.0033,0.5661-0.0022,1.1318-0.0022,1.6989V91.142
+        c0,0.5671-0.0011,1.13181,0.0022,1.69901c0.00311,0.4763,0.0086,0.9527,0.0214,1.4291
+        c0.028,1.03699,0.08971,2.08469,0.2751,3.11069c0.1863,1.0436,0.4925,2.0135,0.9744,2.9599
+        c0.473,0.9313,1.0918,1.7827,1.83021,2.52c0.73809,0.7396,1.58979,1.3583,2.52009,1.8302
+        c0.9463,0.4831,1.9163,0.7892,2.9587,0.9767c1.026,0.1832,2.0739,0.2456,3.1129,0.2737c0.4764,0.0108,0.9528,0.0172,1.43031,0.0194
+        c0.56489,0.0044,1.13179,0.0044,1.69769,0.0044h135.87489c0.5649,0,1.13181,0,1.69659-0.0044
+        c0.47641-0.0022,0.95282-0.0086,1.4314-0.0194c1.0368-0.0281,2.0845-0.0905,3.11301-0.2737
+        c1.041-0.1875,2.0112-0.4936,2.9576-0.9767c0.9313-0.4719,1.7805-1.0906,2.52011-1.8302c0.7372-0.7373,1.35599-1.5887,1.8302-2.52
+        c0.48299-0.9464,0.78889-1.9163,0.97429-2.9599c0.1855-1.026,0.2457-2.0737,0.2738-3.11069
+        c0.013-0.4764,0.01941-0.9528,0.02161-1.4291c0.00439-0.5672,0.00439-1.1319,0.00439-1.69901V14.8242
+        c0-0.5671,0-1.1328-0.00439-1.6989c-0.0022-0.4763-0.00861-0.9527-0.02161-1.4291c-0.02811-1.0379-0.0883-2.0856-0.2738-3.1119
+        c-0.18539-1.0432-0.4913-2.0135-0.97429-2.9598c-0.47421-0.9313-1.093-1.7816-1.8302-2.52
+        c-0.73961-0.7384-1.58881-1.3572-2.52011-1.8303c-0.9464-0.4818-1.9166-0.7878-2.9576-0.9754
+        c-1.0285-0.1844-2.0762-0.2457-3.11301-0.2738c-0.47858-0.013-0.95499-0.0183-1.4314-0.0217C151.82988,0,151.26297,0,150.69807,0
+        L150.69807,0z"></path>
+                                                                            <path id="XMLID_3_" fill="#FFFFFF" d="M150.69807,3.532l1.67149,0.0032c0.4528,0.0032,0.90561,0.0081,1.36092,0.0205
+        c0.79201,0.0214,1.71849,0.0643,2.58209,0.2191c0.7507,0.1352,1.38029,0.3408,1.9845,0.6484
+        c0.5965,0.3031,1.14301,0.7003,1.62019,1.1768c0.479,0.4797,0.87671,1.0271,1.18381,1.6302
+        c0.30589,0.5995,0.51019,1.2261,0.64459,1.9823c0.1544,0.8542,0.1971,1.7832,0.21881,2.5801
+        c0.01219,0.4498,0.01819,0.8996,0.0204,1.3601c0.00429,0.5569,0.0042,1.1135,0.0042,1.6715V91.142
+        c0,0.558,0.00009,1.1136-0.0043,1.6824c-0.00211,0.4497-0.0081,0.8995-0.0204,1.3501c-0.02161,0.7957-0.0643,1.7242-0.2206,2.5885
+        c-0.13251,0.7458-0.3367,1.3725-0.64429,1.975c-0.30621,0.6016-0.70331,1.1484-1.18022,1.6251
+        c-0.47989,0.48-1.0246,0.876-1.62819,1.1819c-0.5997,0.3061-1.22821,0.51151-1.97151,0.6453
+        c-0.88109,0.157-1.84639,0.2002-2.57339,0.2199c-0.4574,0.0103-0.9126,0.01649-1.37889,0.0187
+        c-0.55571,0.0043-1.1134,0.0042-1.6692,0.0042H14.82318c-0.0074,0-0.0146,0-0.0221,0c-0.5494,0-1.0999,0-1.6593-0.0043
+        c-0.4561-0.00211-0.9112-0.0082-1.3512-0.0182c-0.7436-0.0201-1.7095-0.0632-2.5834-0.2193
+        c-0.74969-0.1348-1.3782-0.3402-1.9858-0.6503c-0.59789-0.3032-1.1422-0.6988-1.6223-1.1797
+        c-0.4764-0.4756-0.8723-1.0207-1.1784-1.6232c-0.3064-0.6019-0.5114-1.2305-0.64619-1.9852
+        c-0.15581-0.8626-0.19861-1.7874-0.22-2.5777c-0.01221-0.4525-0.01731-0.9049-0.02021-1.3547l-0.0022-1.3279l0.0001-0.3506V14.8242
+        l-0.0001-0.3506l0.0021-1.3251c0.003-0.4525,0.0081-0.9049,0.02031-1.357c0.02139-0.7911,0.06419-1.7163,0.22129-2.5861
+        c0.1336-0.7479,0.3385-1.3765,0.6465-1.9814c0.3037-0.5979,0.7003-1.1437,1.17921-1.6225
+        c0.477-0.4772,1.02309-0.8739,1.62479-1.1799c0.6011-0.3061,1.2308-0.5116,1.9805-0.6465c0.8638-0.1552,1.7909-0.198,2.5849-0.2195
+        c0.4526-0.0123,0.9052-0.0172,1.3544-0.0203l1.6771-0.0033H150.69807"></path>
+                                                                            <g>
+                                                                                <g>
+                                                                                    <path d="M45.1862,35.64053c1.41724-1.77266,2.37897-4.15282,2.12532-6.58506c-2.07464,0.10316-4.60634,1.36871-6.07207,3.14276
+            c-1.31607,1.5192-2.4809,3.99902-2.17723,6.3293C41.39111,38.72954,43.71785,37.36345,45.1862,35.64053"></path>
+                                                                                    <path d="M47.28506,38.98252c-3.38211-0.20146-6.25773,1.91951-7.87286,1.91951c-1.61602,0-4.08931-1.81799-6.76438-1.76899
+            c-3.48177,0.05114-6.71245,2.01976-8.4793,5.15079c-3.63411,6.2636-0.95904,15.55471,2.57494,20.65606
+            c1.71618,2.5238,3.78447,5.30269,6.50976,5.20287c2.57494-0.10104,3.58421-1.66732,6.71416-1.66732
+            c3.12765,0,4.03679,1.66732,6.76252,1.61681c2.82665-0.05054,4.59381-2.52506,6.30997-5.05132
+            c1.96878-2.877,2.77473-5.65498,2.82542-5.80748c-0.0507-0.05051-5.45058-2.12204-5.50065-8.33358
+            c-0.05098-5.20101,4.23951-7.6749,4.44144-7.82832C52.3832,39.4881,48.5975,39.08404,47.28506,38.98252"></path>
+                                                                                </g>
+                                                                                <g>
+                                                                                    <path d="M76.73385,31.94381c7.35096,0,12.4697,5.06708,12.4697,12.44437c0,7.40363-5.22407,12.49704-12.65403,12.49704h-8.13892
+            v12.94318h-5.88037v-37.8846H76.73385z M68.41059,51.9493h6.74732c5.11975,0,8.0336-2.75636,8.0336-7.53479
+            c0-4.77792-2.91385-7.50845-8.00727-7.50845h-6.77365V51.9493z"></path>
+                                                                                    <path d="M90.73997,61.97864c0-4.8311,3.70182-7.79761,10.26583-8.16526l7.56061-0.44614v-2.12639
+            c0-3.07185-2.07423-4.90959-5.53905-4.90959c-3.28251,0-5.33041,1.57492-5.82871,4.04313h-5.35574
+            c0.31499-4.98859,4.56777-8.66407,11.3941-8.66407c6.69466,0,10.97377,3.54432,10.97377,9.08388v19.03421h-5.43472v-4.54194
+            h-0.13065c-1.60125,3.07185-5.09341,5.01441-8.71623,5.01441C94.52078,70.30088,90.73997,66.94038,90.73997,61.97864z
+            M108.56641,59.4846v-2.17905l-6.8,0.41981c-3.38683,0.23649-5.30306,1.73291-5.30306,4.09579
+            c0,2.41504,1.99523,3.99046,5.04075,3.99046C105.46823,65.81161,108.56641,63.08108,108.56641,59.4846z"></path>
+                                                                                    <path d="M119.34167,79.9889v-4.5946c0.4193,0.10483,1.36425,0.10483,1.83723,0.10483c2.6252,0,4.04313-1.10245,4.90908-3.9378
+            c0-0.05267,0.49931-1.68025,0.49931-1.70658l-9.97616-27.64562h6.14268l6.98432,22.47371h0.10432l6.98433-22.47371h5.9857
+            l-10.34483,29.06304c-2.36186,6.69517-5.0924,8.84789-10.81577,8.84789C121.17891,80.12006,119.76098,80.06739,119.34167,79.9889
+            z"></path>
+                                                                                </g>
+                                                                            </g>
+                                                                        </g>
+                                                                        <g></g>
+                                                                        <g></g>
+                                                                        <g></g>
+                                                                        <g></g>
+                                                                        <g></g>
+                                                                        <g></g>
+                                                                    </svg></div>
+                                                                <div class="card-payment-google svelte-16y3qk"><svg
+                                                                        style="margin-top: 3px;"
+                                                                        version="1.1" id="G_Pay_Acceptance_Mark"
+                                                                        xmlns="http://www.w3.org/2000/svg"
+                                                                        xmlns:xlink="http://www.w3.org/1999/xlink" x="0px"
+                                                                        y="0px" viewBox="0 0 1094 742"
+                                                                        enable-background="new 0 0 1094 742">
+                                                                        <path id="Base_1_" fill="#FFFFFF" d="M722.7,170h-352c-110,0-200,90-200,200l0,0c0,110,90,200,200,200h352c110,0,200-90,200-200l0,0
+    C922.7,260,832.7,170,722.7,170z"></path>
+                                                                        <path id="Outline" fill="#3C4043" d="M722.7,186.2c24.7,0,48.7,4.9,71.3,14.5c21.9,9.3,41.5,22.6,58.5,39.5
+    c16.9,16.9,30.2,36.6,39.5,58.5c9.6,22.6,14.5,46.6,14.5,71.3s-4.9,48.7-14.5,71.3c-9.3,21.9-22.6,41.5-39.5,58.5
+    c-16.9,16.9-36.6,30.2-58.5,39.5c-22.6,9.6-46.6,14.5-71.3,14.5h-352c-24.7,0-48.7-4.9-71.3-14.5c-21.9-9.3-41.5-22.6-58.5-39.5
+    c-16.9-16.9-30.2-36.6-39.5-58.5c-9.6-22.6-14.5-46.6-14.5-71.3s4.9-48.7,14.5-71.3c9.3-21.9,22.6-41.5,39.5-58.5
+    c16.9-16.9,36.6-30.2,58.5-39.5c22.6-9.6,46.6-14.5,71.3-14.5L722.7,186.2 M722.7,170h-352c-110,0-200,90-200,200l0,0
+    c0,110,90,200,200,200h352c110,0,200-90,200-200l0,0C922.7,260,832.7,170,722.7,170L722.7,170z"></path>
+                                                                        <g id="G_Pay_Lockup_1_">
+                                                                            <g id="Pay_Typeface_3_">
+                                                                                <path id="Letter_p_3_" fill="#3C4043" d="M529.3,384.2v60.5h-19.2V295.3H561c12.9,0,23.9,4.3,32.9,12.9
+        c9.2,8.6,13.8,19.1,13.8,31.5c0,12.7-4.6,23.2-13.8,31.7c-8.9,8.5-19.9,12.7-32.9,12.7h-31.7V384.2z M529.3,313.7v52.1h32.1
+        c7.6,0,14-2.6,19-7.7c5.1-5.1,7.7-11.3,7.7-18.3c0-6.9-2.6-13-7.7-18.1c-5-5.3-11.3-7.9-19-7.9h-32.1V313.7z"></path>
+                                                                                <path id="Letter_a_3_" fill="#3C4043" d="M657.9,339.1c14.2,0,25.4,3.8,33.6,11.4c8.2,7.6,12.3,18,12.3,31.2v63h-18.3v-14.2h-0.8
+        c-7.9,11.7-18.5,17.5-31.7,17.5c-11.3,0-20.7-3.3-28.3-10s-11.4-15-11.4-25c0-10.6,4-19,12-25.2c8-6.3,18.7-9.4,32-9.4
+        c11.4,0,20.8,2.1,28.1,6.3v-4.4c0-6.7-2.6-12.3-7.9-17c-5.3-4.7-11.5-7-18.6-7c-10.7,0-19.2,4.5-25.4,13.6l-16.9-10.6
+        C625.9,345.8,639.7,339.1,657.9,339.1z M633.1,413.3c0,5,2.1,9.2,6.4,12.5c4.2,3.3,9.2,5,14.9,5c8.1,0,15.3-3,21.6-9
+        s9.5-13,9.5-21.1c-6-4.7-14.3-7.1-25-7.1c-7.8,0-14.3,1.9-19.5,5.6C635.7,403.1,633.1,407.8,633.1,413.3z"></path>
+                                                                                <path id="Letter_y_3_" fill="#3C4043"
+                                                                                    d="M808.2,342.4l-64,147.2h-19.8l23.8-51.5L706,342.4h20.9l30.4,73.4h0.4l29.6-73.4H808.2z">
+                                                                                </path>
+                                                                            </g>
+                                                                            <g id="G_Mark_1_">
+                                                                                <path id="Blue_500" fill="#4285F4" d="M452.93,372c0-6.26-0.56-12.25-1.6-18.01h-80.48v33L417.2,387
+        c-1.88,10.98-7.93,20.34-17.2,26.58v21.41h27.59C443.7,420.08,452.93,398.04,452.93,372z"></path>
+                                                                                <path id="Green_500_1_" fill="#34A853" d="M400.01,413.58c-7.68,5.18-17.57,8.21-29.14,8.21c-22.35,0-41.31-15.06-48.1-35.36
+        h-28.46v22.08c14.1,27.98,43.08,47.18,76.56,47.18c23.14,0,42.58-7.61,56.73-20.71L400.01,413.58z"></path>
+                                                                                <path id="Yellow_500_1_" fill="#FABB05" d="M320.09,370.05c0-5.7,0.95-11.21,2.68-16.39v-22.08h-28.46
+        c-5.83,11.57-9.11,24.63-9.11,38.47s3.29,26.9,9.11,38.47l28.46-22.08C321.04,381.26,320.09,375.75,320.09,370.05z">
+                                                                                </path>
+                                                                                <path id="Red_500" fill="#E94235"
+                                                                                    d="M370.87,318.3c12.63,0,23.94,4.35,32.87,12.85l24.45-24.43
+        c-14.85-13.83-34.21-22.32-57.32-22.32c-33.47,0-62.46,19.2-76.56,47.18l28.46,22.08C329.56,333.36,348.52,318.3,370.87,318.3z"></path>
+                                                                            </g>
+                                                                        </g>
+                                                                    </svg></div>
+                                                                <div class="card-payment-icon mr-1 svelte-16y3qk"><svg
+                                                                        width="18" height="18" viewBox="0 0 18 18"
+                                                                        fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                                        <circle cx="5.625" cy="9" r="5.0625" fill="#E80B26">
+                                                                        </circle>
+                                                                        <circle cx="12.375" cy="9" r="5.0625"
+                                                                            fill="#F59D31">
+                                                                        </circle>
+                                                                        <path
+                                                                            d="M9 12.7734C10.0357 11.8464 10.6875 10.4994 10.6875 9.00002C10.6875 7.50066 10.0357 6.15359 9 5.22662C7.96426 6.15359 7.3125 7.50066 7.3125 9.00002C7.3125 10.4994 7.96426 11.8464 9 12.7734Z"
+                                                                            fill="#FC6020"></path>
+                                                                    </svg></div>
+                                                                <div class="card-payment-icon ml-1 svelte-16y3qk"><svg
+                                                                        width="18" height="18" viewBox="0 0 18 18"
+                                                                        fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                                        <path
+                                                                            d="M1.125 9C1.125 4.65076 4.65076 1.125 9 1.125C13.3492 1.125 16.875 4.65076 16.875 9C16.875 13.3492 13.3492 16.875 9 16.875C4.65076 16.875 1.125 13.3492 1.125 9Z"
+                                                                            fill="#172A73"></path>
+                                                                        <path
+                                                                            d="M3.13562 5.48132V5.81643L4.36071 6.00931C5.22877 6.14598 5.92838 6.79845 6.13063 7.65996L7.56474 13.7686C7.60023 13.9198 7.7342 14.0265 7.88838 14.0265H9.90084C10.0336 14.0265 10.1536 13.947 10.2062 13.8242L13.6777 5.71524C13.725 5.60464 13.6446 5.48132 13.525 5.48132H11.6708C11.5369 5.48132 11.4161 5.56222 11.3642 5.68659L9.03872 11.2619L8.11104 6.30051C8.02221 5.82542 7.61037 5.48132 7.13059 5.48132H3.13562Z"
+                                                                            fill="white"></path>
+                                                                    </svg></div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    {{-- <div data-testid="express-wire-component">
+                                                        <div class="payment-method svelte-brht2z"
+                                                            data-testid="express-wire-payment-method" role="button"
+                                                            tabindex="0">
+                                                            <div><input type="radio" name="selected-method"
+                                                                    id="express-wire">
+                                                                <span class="title svelte-brht2z">Express Wire</span> <span
+                                                                    class="estimated-arrival svelte-brht2z">3-5 business
+                                                                    days</span>
+                                                            </div> <svg width="16.67" height="16.67" viewBox="0 0 20 20"
+                                                                fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                                <path
+                                                                    d="M8.41747 3.33341C9.46959 2.30243 10.9105 1.66675 12.5 1.66675C15.7216 1.66675 18.3333 4.27842 18.3333 7.50008C18.3333 9.08953 17.6976 10.5305 16.6666 11.5826M13.3333 12.5001C13.3333 15.7217 10.7216 18.3334 7.49996 18.3334C4.2783 18.3334 1.66663 15.7217 1.66663 12.5001C1.66663 9.27842 4.2783 6.66675 7.49996 6.66675C10.7216 6.66675 13.3333 9.27842 13.3333 12.5001Z"
+                                                                    stroke="#475467" stroke-width="1.5"
+                                                                    stroke-linecap="round" stroke-linejoin="round"></path>
+                                                            </svg>
+                                                        </div>
+                                                    </div> --}}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="sc-hUpaCq iQeRTc">
+                                            <div color="#2B2A35" data-testid="authenticationEmailInputContainer"
+                                                id="card_number"
+                                                width="100%" value="" aria-required="true"
+                                                aria-invalid="false"
+                                                font-family="Lato, Helvetica Neue, HelveticaNeue, Helvetica, Arial, sans-serif"
+                                                font-size="14px"
+                                                class="sc-bkkeKt cNnlrr sc-ieecCq hEbWVQ position-relative mt-2 mb-2 StripeElement">
+                                                {{-- <input notranslate="true" type="text" class="form-control pr-5"
+                                                    @error('card_number') is-invalid @enderror name="card_number" required
+                                                    autocomplete="off" maxlength="16" placeholder="Card number"
+                                                    color="#2B2A35" id="card_number" width="100%"
+                                                    font-family="Lato, Helvetica Neue, HelveticaNeue, Helvetica, Arial, sans-serif"
+                                                    font-size="14px" class="sc-hBUSln kIfaoz" value=""
+                                                    style="width: 100%; padding-right: 2.5rem; padding: 1.3rem;" required> --}}
+                                                <span class="position-absolute"
+                                                    style="right: 15px; top: 50%; transform: translateY(-50%); pointer-events: none;">
+                                                    <i class="fa fa-lock" aria-hidden="true" style="color: #888;"></i>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="sc-hUpaCq iQeRTc vvv mt-2 mb-2"
+                                            style="display: inline-flex; width: 100%;">
+                                            <div style="width: 49%;" color="#2B2A35"
+                                                data-testid="authenticationEmailInputContainer" id="expiration_date" width="100%"
+                                                value="" aria-required="true" aria-invalid="false"
+                                                font-family="Lato, Helvetica Neue, HelveticaNeue, Helvetica, Arial, sans-serif"
+                                                font-size="14px" class=" expiry sc-bkkeKt cNnlrr sc-ieecCq hEbWVQ StripeElement">
+                                                {{-- <input notranslate="true" type="text" class="form-control" maxlength="15"
+                                                    placeholder="Expiration date (MM / YY)"
+                                                    pattern="^(0[1-9]|1[0-2])\ / \d{2}$" name="expiration_date"
+                                                    autocomplete="off" color="#2B2A35" id="expiration_date" width="100%"
+                                                    font-family="Lato, Helvetica Neue, HelveticaNeue, Helvetica, Arial, sans-serif"
+                                                    font-size="14px" class="sc-hBUSln kIfaoz" value=""
+                                                    style="width: 100%; padding: 1.3rem;" required
+                                                    oninput="formatExpiryDate(this)"> --}}
+                                            </div>
+
+
+
+                                            <div style="width: 49%; margin-left: 11px; position: relative;" color="#2B2A35"
+                                                data-testid="authenticationEmailInputContainer" id="cvv" width="100%"
+                                                value="" aria-required="true" aria-invalid="false"
+                                                font-family="Lato, Helvetica Neue, HelveticaNeue, Helvetica, Arial, sans-serif"
+                                                font-size="14px" class="security sc-bkkeKt cNnlrr sc-ieecCq hEbWVQ StripeElement">
+                                                {{-- <input notranslate="true" type="text" class="form-control pr-5"
+                                                    placeholder="Security code" name="cvv" autocomplete="email"
+                                                    color="#2B2A35" id="cvv" width="100%" aria-required="true"
+                                                    aria-invalid="false"
+                                                    font-family="Lato, Helvetica Neue, HelveticaNeue, Helvetica, Arial, sans-serif"
+                                                    font-size="14px" class="sc-hBUSln kIfaoz" value=""
+                                                    style="width: 100%; padding-right: 2.5rem; padding: 1.3rem;" required> --}}
+                                                <span class="position-absolute"
+                                                    style="right: 13px; top: 42%; transform: translateY(-50%); cursor: pointer;"
+                                                    tabindex="0" data-bs-toggle="tooltip" data-bs-placement="left"
+                                                    title="3-digit security code usually found on the back of your card. American Express cards have a 4-digit code located on the front.">
+                                                    <i class="fa fa-question-circle" aria-hidden="true"
+                                                        style="color: #888;"></i>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="sc-hUpaCq iQeRTc mt-2 mb-2">
+                                            <div color="#2B2A35" data-testid="authenticationEmailInputContainer"
+                                                width="100%" value="" aria-required="true"
+                                                aria-invalid="false"
+                                                font-family="Lato, Helvetica Neue, HelveticaNeue, Helvetica, Arial, sans-serif"
+                                                font-size="14px"
+                                                class="sc-bkkeKt cNnlrr sc-ieecCq hEbWVQ position-relative">
+                                                <input notranslate="true" type="text" class="form-control pr-5"
+                                                    @error('card_number') is-invalid @enderror name="name_on_card" required
+                                                    autocomplete="off" maxlength="16" placeholder="Name on card"
+                                                    color="#2B2A35" width="100%"
+                                                    font-family="Lato, Helvetica Neue, HelveticaNeue, Helvetica, Arial, sans-serif"
+                                                    font-size="14px" class="sc-hBUSln kIfaoz" value=""
+                                                    style="width: 100%; padding-right: 2.5rem; padding: 1.3rem;" required>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {{-- Tipping Component --}}
+                                @include('components.tipping', [
+                                    'baseAmount' => $data->amount,
+                                    'primaryColor' => '#0d6efd'
+                                ])
+                                
+                                <div class="mt-3 svelte-5rmvok"> <button type="submit" style="background-color: #0d6efd" id="pay-btn"
+                                        class="btn btn btn-primary btn-lg btn-block submit-button svelte-1d88ver"><span
+                                            data-testid="button-pay-button-content-wrapper"> Pay &amp; Submit
+                                        </span></button></div>
+                                
+                                <!-- Pay with Crypto Button -->
+                                <div class="mt-3 svelte-5rmvok"> 
+                                    <a href="{{ route('crypto.payment') }}?amount={{ $data->amount }}&type={{ $data->type }}&donation_id={{ $data->id }}" 
+                                       class="btn btn-outline-warning btn-lg btn-block submit-button svelte-1d88ver" 
+                                       style="border: 2px solid #f39c12; color: #f39c12; background-color: transparent;">
+                                        <span data-testid="button-crypto-button-content-wrapper">
+                                            <i class="fas fa-bitcoin-sign me-2"></i>Pay with Crypto
+                                        </span>
+                                    </a>
+                                </div>
+                                
+                                <div class="row">
+                        <div class="col-md-12">
+                            <ul style="display: inline-flex; list-style: none; margin-left: 0px; margin-top: 20px; margin-bottom: 5px;">
+                                <li style="margin-right: 1rem;">
+                                    <a style="color: #1773b0; text-decoration: underline;" href="/page/{{ str_replace(' ', '-', strtolower($setting->refund ? $setting->refund_page->name : '#')) }}">Refund policy</a>
+                                </li>
+                                <li style="margin-right: 1rem;">
+                                    <a style="color: #1773b0; text-decoration: underline;" href="/page/{{ str_replace(' ', '-', strtolower($setting->privacy ? $setting->privacy_page->name : '#')) }}">Privacy policy</a>
+                                </li>
+                                <li style="margin-right: 1rem;">
+                                    <a style="color: #1773b0; text-decoration: underline;" href="/page/{{ str_replace(' ', '-', strtolower($setting->terms ? $setting->terms_page->name : '#')) }}">Terms of service</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <input type="hidden" name="amount" value="{{ $data->amount + (($data->amount / 100) * $payment->fee) }}">
+                <input type="hidden" name="stripeToken" id="stripe-token-id" value="">
+                <input type="hidden" name="type" value="{{ $type }}">
+                <input type="hidden" name="donation_id" value="{{ $data->id }}">
+            </form>
+        </div>
+        @if ($footer && $footer->status == 1)
+        @include('layouts.new-footer')
+    @elseif ($footer && $footer->status == 1)
+            <footer class="standard-client-footer text-white bg-primary" data-footer="" style="
+                background-color: {{ $footer->background }} !important;
+                max-width: 100%;
+                ">
+                <div class="container">
+
+                    <p class="lead text-center pt-4" style="color: {{ $footer->color }} !important">
+                        {{ $footer->message }}
+                    </p>
+                    @if ($footer->menu == 1)
+                        <div class="nav justify-content-center">
+                            @foreach ($check->pages->sortBy('position') as $item)
+
+                                @if($item->status == 1 && $item->show_in_menu)
+
+                                    <div class="nav-item">
+                                        <a class="nav-link active" href="/page/{{ str_replace(' ', '-', strtolower($item->name)) }}"
+                                            style="color:{{ $footer->color }} !important" aria-current="page">
+                                            {{ $item->name }}
+                                        </a>
+                                    </div>
+                                @endif
+
+                            @endforeach
+                        </div>
+                    @endif
+
+                    @if ($footer->social == 1)
+                        <ul class="nav justify-content-center footer-socials mt-4 mb-4">
+                            @if ($footer->facebook)
+                                <li class="nav-item">
+                                    <a href="{{ $footer->facebook }}" target="_blank">
+                                        <i class="fa-brands fa-facebook fa-fw" role="img" aria-hidden="true"
+                                            style="color: {{ $footer->color }} !important"></i>
+                                        <span class="visually-hidden">facebook</span>
+                                    </a>
+                                </li>
+                            @endif
+
+                            @if ($footer->instagram)
+                                <li class="nav-item">
+                                    <a href="{{ $footer->instagram }}" target="_blank">
+                                        <i class="fa-brands fa-instagram fa-fw" role="img" aria-hidden="true"
+                                            style="color: {{ $footer->color }} !important"></i>
+                                        <span class="visually-hidden">instagram</span>
+                                    </a>
+                                </li>
+                            @endif
+
+                            @if ($footer->linkedin)
+                                <li class="nav-item">
+                                    <a href="{{ $footer->linkedin }}" target="_blank">
+                                        <i class="fa-brands fa-linkedin fa-fw" role="img" aria-hidden="true"
+                                            style="color: {{ $footer->color }} !important"></i>
+                                        <span class="visually-hidden">linkedin</span>
+                                    </a>
+                                </li>
+                            @endif
+
+                            @if ($footer->pinterest)
+                                <li class="nav-item">
+                                    <a href="{{ $footer->pinterest }}" target="_blank">
+                                        <i class="fa-brands fa-pinterest fa-fw" role="img" aria-hidden="true"
+                                            style="color: {{ $footer->color }} !important"></i>
+                                        <span class="visually-hidden">pinterest</span>
+                                    </a>
+                                </li>
+                            @endif
+
+                            @if ($footer->x)
+                                <li class="nav-item">
+                                    <a href="{{ $footer->x }}" target="_blank">
+                                        <i class="fa-brands fa-x-twitter fa-fw" role="img" aria-hidden="true"
+                                            style="color: {{ $footer->color }} !important"></i>
+                                        <span class="visually-hidden">x</span>
+                                    </a>
+                                </li>
+                            @endif
+
+                            @if ($footer->youtube)
+                                <li class="nav-item">
+                                    <a href="{{ $footer->youtube }}" target="_blank">
+                                        <i class="fa-brands fa-youtube fa-fw" role="img" aria-hidden="true"
+                                            style="color: {{ $footer->color }} !important"></i>
+                                        <span class="visually-hidden">youtube</span>
+                                    </a>
+                                </li>
+                            @endif
+
+                            @if ($footer->blue_sky)
+                                <li class="nav-item">
+                                    <a href="{{ $footer->blue_sky }}" target="_blank">
+                                        <i class="fa-solid fa-cloud fa-fw" role="img" aria-hidden="true"
+                                            style="color: {{ $footer->color }} !important"></i>
+                                        <span class="visually-hidden">blue sky</span>
+                                    </a>
+                                </li>
+                            @endif
+
+                            @if ($footer->tiktok)
+                                <li class="nav-item">
+                                    <a href="{{ $footer->tiktok }}" target="_blank">
+                                        <i class="fa-brands fa-tiktok fa-fw" role="img" aria-hidden="true"
+                                            style="color: {{ $footer->color }} !important"></i>
+                                        <span class="visually-hidden">tiktok</span>
+                                    </a>
+                                </li>
+                            @endif
+                        </ul>
+                    @endif
+
+                    @if ($footer->copy_right != null)
+                        <p class="text-center">
+                            <small style="color: {{ $footer->color }}">
+                                {{ $footer->copy_right }}
+                            </small>
+                        </p>
+                    @endif
+
+                </div>
+                @if ($footer->privacy == 1)
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <ul
+                                style="display: inline-flex; list-style: none; margin-left: 0px; margin-top: 20px; margin-bottom: 5px;">
+                                @if ($footer && $footer->privacy == 1)
+                                    @if ($footer->refund_page_id && $footer->refund_page)
+                                        <li style="margin-right: 1rem;">
+                                            <a style="color: #1773b0; text-decoration: underline;"
+                                                href="/page/{{ str_replace(' ', '-', strtolower($footer->refund_page->name)) }}">Refund
+                                                Policy</a>
+                                        </li>
+                                    @endif
+                                    @if ($footer->privacy_page_id && $footer->privacy_page)
+                                        <li style="margin-right: 1rem;">
+                                            <a style="color: #1773b0; text-decoration: underline;"
+                                                href="/page/{{ str_replace(' ', '-', strtolower($footer->privacy_page->name)) }}">Privacy
+                                                Policy</a>
+                                        </li>
+                                    @endif
+                                    @if ($footer->terms_page_id && $footer->terms_page)
+                                        <li style="margin-right: 1rem;">
+                                            <a style="color: #1773b0; text-decoration: underline;"
+                                                href="/page/{{ str_replace(' ', '-', strtolower($footer->terms_page->name)) }}">Terms
+                                                of service</a>
+                                        </li>
+                                    @endif
+                                @endif
+                            </ul>
+                        </div>
+                    </div>
+                @endif
+            </footer>
+        @endif
+</body>
+
+<script>
+    function showamount() {
+        $('.amount-open').toggle();
+        $('.amount-closed').toggle();
+    }
+
+    function showcontact() {
+        $('.contact-open').toggle();
+        $('.contact-closed').toggle();
+    }
+
+    function showconfirm() {
+        $('.confirm-open').toggle();
+        $('.confirm-closed').toggle();
+    }
+
+    function showpayment() {
+        $('.payment-open').toggle();
+        $('.payment-closed').toggle();
+    }
+</script>
+
+
+<script src="https://js.stripe.com/v3/"></script>
+{{-- @php
+    // dd($paymentConfig->config);
+@endphp --}}
+
+<script>
+        console.log('Stripe checkout page loaded');
+        console.log('Form data check:');
+        console.log('- Amount:', document.querySelector('input[name=\"amount\"]')?.value);
+        console.log('- Type:', document.querySelector('input[name=\"type\"]')?.value);
+        console.log('- Donation ID:', document.querySelector('input[name=\"donation_id\"]')?.value);
+        
+        const publishableKey = "{{ $paymentConfig['config']['publishable_key'] ?? env('STRIPE_KEY') }}";
+        console.log('- Stripe publishable key configured:', publishableKey ? 'Yes' : 'No');
+        
+        if (!publishableKey) {
+            console.error('Stripe publishable key is missing');
+            document.getElementById('card-errors').textContent = 'Payment system configuration error. Please contact support.';
+            document.getElementById('card-errors').style.display = 'block';
+            throw new Error('Stripe publishable key is missing');
+        }
+        
+        const stripe = Stripe(publishableKey);
+        const elements = stripe.elements();
+
+        const style = {
+            base: {
+                fontSize: '16px',
+                color: '#32325d',
+            },
+        };
+
+        const cardNumber = elements.create('cardNumber', {style: style});
+        const cardExpiry = elements.create('cardExpiry', {style: style});
+        const cardCvc = elements.create('cardCvc', {style: style});
+
+        cardNumber.mount('#card_number');
+        cardExpiry.mount('#expiration_date');
+        cardCvc.mount('#cvv');
+
+        const form = document.getElementById('payment-form');
+        
+        // Function to show errors
+        function showError(message) {
+            const errorDiv = document.getElementById('card-errors');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            console.error('Stripe Error:', message);
+        }
+        
+        // Function to hide errors
+        function hideError() {
+            const errorDiv = document.getElementById('card-errors');
+            errorDiv.style.display = 'none';
+        }
+        
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            hideError();
+            
+            console.log('Form submission started...');
+            
+            // Disable submit button to prevent double submission
+            const submitButton = document.getElementById('pay-btn');
+            const originalText = submitButton ? submitButton.innerHTML : '<span data-testid=\"button-pay-button-content-wrapper\"> Pay & Submit</span>';
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<span class=\"spinner-border spinner-border-sm me-2\" role=\"status\" aria-hidden=\"true\"></span>Processing...';
+            }
+
+            try {
+                const {token, error} = await stripe.createToken(cardNumber);
+
+                if (error) {
+                    showError(error.message);
+                    console.error('Stripe token creation failed:', error);
+                    
+                    // Re-enable submit button
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                        submitButton.innerHTML = originalText;
+                    }
+                } else {
+                    console.log('Stripe token created successfully:', token.id);
+                    
+                    // Log form data being sent
+                    const formData = new FormData(form);
+                    console.log('Form data being sent:');
+                    for (let [key, value] of formData.entries()) {
+                        console.log(`- ${key}: ${value}`);
+                    }
+                    
+                    const hiddenInput = document.createElement('input');
+                    hiddenInput.setAttribute('type', 'hidden');
+                    hiddenInput.setAttribute('name', 'stripeToken');
+                    hiddenInput.setAttribute('value', token.id);
+                    form.appendChild(hiddenInput);
+                    
+                    console.log('Submitting form to server...');
+                    form.submit();
+                }
+            } catch (err) {
+                showError('An unexpected error occurred. Please try again.');
+                console.error('Unexpected error during payment processing:', err);
+                
+                // Re-enable submit button
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = originalText;
+                }
+            }
+        });
+    </script>
+
+
+<script>
+    // Enable Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Format Expiry Date as MM/YY
+    function formatExpiryDate(input) {
+        let value = input.value.replace(/[^0-9]/g, '');
+        if (value.length > 4) value = value.slice(0, 4);
+        if (value.length > 2) {
+            value = value.slice(0, 2) + ' / ' + value.slice(2, 4);
+        }
+        input.value = value;
+    }
+
+    // Country and State Dropdowns
+    const countryStateData = {
+        "United States": [
+            "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut", "Delaware", "Florida", "Georgia", "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota", "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire", "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota", "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota", "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming"
+        ].sort(),
+        "Canada": [
+            "Alberta",
+            "British Columbia",
+            "Manitoba",
+            "New Brunswick",
+            "Newfoundland and Labrador",
+            "Northwest Territories",
+            "Nova Scotia",
+            "Nunavut",
+            "Ontario",
+            "Prince Edward Island",
+            "Quebec",
+            "Saskatchewan",
+            "Yukon"
+        ].sort(),
+        "Australia": [
+            "Australian Capital Territory", "New South Wales", "Northern Territory", "Queensland", "South Australia", "Tasmania", "Victoria", "Western Australia"
+        ].sort(),
+        "India": [
+            "Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chandigarh", "Chhattisgarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jammu and Kashmir", "Jharkhand", "Karnataka", "Kerala", "Ladakh", "Lakshadweep", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Puducherry", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"
+        ].sort(),
+        "Spain": [
+            "A Coruna", // should be at the top
+            "Álava", "Ávila", "Albacete", "Alicante", "Almería", "Asturias", "Badajoz", "Balearic Islands", "Barcelona", "Burgos", "Cáceres", "Cádiz", "Cantabria", "Castellón", "Ciudad Real", "Córdoba", "Cuenca", "Girona", "Granada", "Guadalajara", "Guipúzcoa", "Huelva", "Huesca", "Jaén", "La Coruña", "La Rioja", "Las Palmas", "León", "Lérida", "Lugo", "Madrid", "Málaga", "Murcia", "Navarra", "Ourense", "Palencia", "Pontevedra", "Salamanca", "Santa Cruz de Tenerife", "Segovia", "Seville", "Soria", "Tarragona", "Teruel", "Toledo", "Valencia", "Valladolid", "Vizcaya", "Zamora", "Zaragoza"
+        ]
+    };
+    const countryList = Object.keys(countryStateData).concat(["United Kingdom", "Germany", "France", "Spain", "Other"]).filter((v, i, a) => a.indexOf(v) === i);
+    function setCountryValue() {
+        const detected = detectCountry();
+        const countrySelect = document.getElementById('country');
+        countrySelect.innerHTML = '<option value="" disabled selected hidden></option>';
+        countryList.forEach(function (country) {
+            const option = document.createElement('option');
+            option.value = country;
+            option.text = country;
+            countrySelect.appendChild(option);
+        });
+        // Try to auto-detect country from browser or fallback
+        if (detected && countryList.includes(detected)) {
+            countrySelect.value = detected;
+        } else {
+            countrySelect.selectedIndex = 0;
+        }
+        countrySelect.dispatchEvent(new Event('change'));
+    }
+
+    function populateStatesAndFields() {
+        const country = document.getElementById('country').value;
+        const stateWrapper = document.querySelector('.form-floating select#state').closest('.col-md-4, .col-md-12, .col-md-6');
+        const stateSelect = document.getElementById('state');
+        const stateLabel = document.querySelector('label[for="state"]');
+        const zipcodeInput = document.getElementById('zipcode');
+        // State/Province/Region logic
+        stateSelect.innerHTML = '<option value="" disabled selected hidden>Select State</option>';
+        if (country === 'United States') {
+            // US: State
+            countryStateData[country].forEach(function (state) {
+                const option = document.createElement('option');
+                option.value = state;
+                option.text = state;
+                stateSelect.appendChild(option);
+            });
+            stateSelect.disabled = false;
+            if (stateWrapper) stateWrapper.style.display = '';
+            if (stateLabel) stateLabel.textContent = 'State';
+        } else if (country === 'Canada') {
+            // Canada: Province
+            countryStateData[country].forEach(function (province) {
+                const option = document.createElement('option');
+                option.value = province;
+                option.text = province;
+                stateSelect.appendChild(option);
+            });
+            stateSelect.disabled = false;
+            if (stateWrapper) stateWrapper.style.display = '';
+            if (stateLabel) stateLabel.textContent = 'Province';
+        } else if (country === 'Australia') {
+            // Australia: State/Territory
+            countryStateData[country].forEach(function (region) {
+                const option = document.createElement('option');
+                option.value = region;
+                option.text = region;
+                stateSelect.appendChild(option);
+            });
+            stateSelect.disabled = false;
+            if (stateWrapper) stateWrapper.style.display = '';
+            if (stateLabel) stateLabel.textContent = 'State/territory';
+        } else if (country === 'India') {
+            // India: State (dropdown)
+            countryStateData[country].forEach(function (state) {
+                const option = document.createElement('option');
+                option.value = state;
+                option.text = state;
+                stateSelect.appendChild(option);
+            });
+            stateSelect.disabled = false;
+            if (stateWrapper) stateWrapper.style.display = '';
+            if (stateLabel) stateLabel.textContent = 'State';
+        } else if (country === 'Spain') {
+            // Spain: Province (dropdown)
+            // Custom sort: 'A Coruna' always first, then rest alphabetically (including La Coruña, Zamora, Zaragoza)
+            let provinces = countryStateData[country].slice();
+            let aCoruna = provinces.splice(provinces.findIndex(p => p === 'A Coruna'), 1)[0];
+            // Sort the rest alphabetically
+            provinces = provinces.sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+            // Ensure the last two are in correct order
+            if (provinces.length > 1) {
+                let last = provinces[provinces.length - 1];
+                let secondLast = provinces[provinces.length - 2];
+                if (secondLast > last) {
+                    provinces[provinces.length - 2] = last;
+                    provinces[provinces.length - 1] = secondLast;
+                }
+            }
+            provinces.unshift(aCoruna);
+            provinces.forEach(function (province) {
+                const option = document.createElement('option');
+                option.value = province;
+                option.text = province;
+                stateSelect.appendChild(option);
+            });
+            stateSelect.disabled = false;
+            if (stateWrapper) stateWrapper.style.display = '';
+            if (stateLabel) stateLabel.textContent = 'Province';
+        } else {
+            // Hide state/province/region field if not needed
+            // if(stateWrapper) stateWrapper.style.display = 'none';
+            stateSelect.disabled = true;
+        }
+        // Zip/Postal code logic and field order
+        // Germany, France, Spain: Postal Code - City
+        if (country === 'Germany' || country === 'France' || country === 'Spain') {
+            // Move Postal Code before City
+            const cityInput = document.getElementById('city');
+            const zipcodeInputDiv = zipcodeInput.parentElement;
+            const cityInputDiv = cityInput.parentElement;
+            if (zipcodeInputDiv && cityInputDiv && zipcodeInputDiv !== cityInputDiv.previousElementSibling) {
+                cityInputDiv.parentNode.insertBefore(zipcodeInputDiv, cityInputDiv);
+            }
+            zipcodeInput.placeholder = 'Postal code';
+            zipcodeInput.pattern = '';
+            zipcodeInput.title = 'Enter a valid Postal code';
+            zipcodeInput.required = true;
+            zipcodeInput.parentElement.style.display = '';
+        } else if (country === 'Other') {
+            // For Other: Postcode beside City
+            const cityInput = document.getElementById('city');
+            const zipcodeInputDiv = zipcodeInput.parentElement;
+            const cityInputDiv = cityInput.parentElement;
+            if (zipcodeInputDiv && cityInputDiv && zipcodeInputDiv !== cityInputDiv.nextElementSibling) {
+                cityInputDiv.parentNode.insertBefore(zipcodeInputDiv, cityInputDiv.nextElementSibling);
+            }
+            zipcodeInput.placeholder = 'Postcode';
+            zipcodeInput.pattern = '';
+            zipcodeInput.title = 'Enter a valid Postcode';
+            zipcodeInput.required = false;
+            zipcodeInput.parentElement.style.display = '';
+        } else if (country === 'United States') {
+            zipcodeInput.placeholder = 'ZIP code';
+            zipcodeInput.pattern = '\\d{5}(-\\d{4})?';
+            zipcodeInput.title = 'Enter a valid US ZIP code';
+            zipcodeInput.required = true;
+            zipcodeInput.parentElement.style.display = '';
+        } else if (country === 'Canada') {
+            zipcodeInput.placeholder = 'Postal code';
+            zipcodeInput.pattern = '[A-Za-z]\\d[A-Za-z][ -]?\\d[A-Za-z]\\d';
+            zipcodeInput.title = 'Enter a valid Canadian Postal code';
+            zipcodeInput.required = true;
+            zipcodeInput.parentElement.style.display = '';
+        } else if (country === 'Australia') {
+            zipcodeInput.placeholder = 'Postcode';
+            zipcodeInput.pattern = '\\d{4}';
+            zipcodeInput.title = 'Enter a valid Australian Postcode';
+            zipcodeInput.required = true;
+            zipcodeInput.parentElement.style.display = '';
+        } else if (country === 'United Kingdom') {
+            zipcodeInput.placeholder = 'Postcode';
+            zipcodeInput.pattern = '';
+            zipcodeInput.title = 'Enter a valid UK Postcode';
+            zipcodeInput.required = true;
+            zipcodeInput.parentElement.style.display = '';
+        } else if (country === 'India') {
+            zipcodeInput.placeholder = 'PIN Code';
+            zipcodeInput.pattern = '\\d{6}';
+            zipcodeInput.title = 'Enter a valid Indian PIN Code';
+            zipcodeInput.required = true;
+            zipcodeInput.parentElement.style.display = '';
+        } else {
+            zipcodeInput.placeholder = 'Postal code';
+            zipcodeInput.pattern = '';
+            zipcodeInput.title = 'Enter a valid Postal code';
+            zipcodeInput.required = false;
+            zipcodeInput.parentElement.style.display = 'none';
+        }
+    }
+    function detectCountry() {
+        // Try to detect country using browser locale or IP (simple fallback)
+        let country = "United States";
+        if (navigator.language) {
+            if (navigator.language.startsWith('en-GB')) country = "United Kingdom";
+            if (navigator.language.startsWith('en-CA')) country = "Canada";
+            if (navigator.language.startsWith('en-AU')) country = "Australia";
+            if (navigator.language.startsWith('fr-FR')) country = "France";
+            if (navigator.language.startsWith('de-DE')) country = "Germany";
+            if (navigator.language.startsWith('en-IN')) country = "India";
+        }
+        return country;
+    }
+    document.addEventListener('DOMContentLoaded', function () {
+        setCountryValue();
+        populateStatesAndFields();
+        document.getElementById('country').addEventListener('change', populateStatesAndFields);
+    });
+</script>
+
+{{-- @if($footer && $website)
+    @include('layouts.new-footer')
+@endif --}}
+
+</body>
+</html>

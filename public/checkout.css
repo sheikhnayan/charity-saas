@@ -1,0 +1,23 @@
+.page-container {
+  max-width: 1300px;
+  margin: 0 auto 2em auto;
+  padding-left: 1em;
+  padding-right: 1em;
+  text-align: center;
+}
+.grid {
+  display: block;
+}
+.grid > * {
+  padding: 1rem;
+}
+@media (min-width: 768px) {
+  .grid {
+    display: grid;
+    grid-auto-rows: 1fr;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.items-table {
+  font-size: smaller;
+}

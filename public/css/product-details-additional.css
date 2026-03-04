@@ -1,0 +1,34 @@
+.min-height-48 {
+  min-height: 48px;
+}
+
+.hidden {
+  display: none;
+}
+
+.footer-base {
+  font-family: 'Market Sans';
+  color: #41413f;
+  font-size: 11px;
+}
+
+.footer-link {
+  color: #707070;
+}
+
+.height-48 {
+  height: 48px;
+}
+
+.ad-banner {
+  height: 1px;
+  overflow: hidden;
+}
+
+.aspect-ratio-1-1 {
+  aspect-ratio: 1 / 1;
+}
+
+.aspect-ratio-800-800 {
+  aspect-ratio: 800 / 800;
+}
