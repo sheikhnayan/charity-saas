@@ -81,7 +81,7 @@ class FrontendController extends Controller
     {
 
         $url = url()->current();
-        if( $url == 'http://fundconnects.com' || $url == 'fundconnects.com' || $url == 'https://fundconnects.com' || $url == 'http://127.0.0.1:8000') {
+        if( $url == 'http://brandallco.com' || $url == 'brandallco.com' || $url == 'https://brandallco.com' || $url == 'http://127.0.0.1:8000') {
             // return redirect()->route('admin.index', 1);
            return $this->dealmakerDemo();
         }
@@ -821,8 +821,8 @@ class FrontendController extends Controller
         
         // Check if this is a main site URL
         $mainSiteUrls = [
-            'fundconnects.com',
-            'www.fundconnects.com',
+            'brandallco.com',
+            'www.brandallco.com',
             // '127.0.0.1'
         ];
 

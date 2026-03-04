@@ -101,7 +101,7 @@ label{
                                                         <div class="form-check">
                                                             <input class="form-check-input" type="radio" name="page_type" id="main_site_page" value="main_site" {{ request('main_site') == '1' ? 'checked' : '' }}>
                                                             <label class="form-check-label" for="main_site_page">
-                                                                <strong>Main Site Page</strong> - Accessible only on fundconnects.com
+                                                                <strong>Main Site Page</strong> - Accessible only on brandallco.com
                                                             </label>
                                                         </div>
                                                         <input type="hidden" name="is_main_site" id="is_main_site" value="{{ request('main_site') == '1' ? '1' : '0' }}">
@@ -263,8 +263,8 @@ label{
                     websiteTypeInfo.style.display = 'block';
                     selectedWebsiteType.textContent = 'Main Site';
                     websiteTypeDescription.innerHTML = `
-                        <strong>Main Site Page:</strong> This page will only be accessible when visiting fundconnects.com domain.
-                        <br><strong>URL:</strong> fundconnects.com/page/your-page-name
+                        <strong>Main Site Page:</strong> This page will only be accessible when visiting brandallco.com domain.
+                        <br><strong>URL:</strong> brandallco.com/page/your-page-name
                         <br><strong>Note:</strong> Main site pages are independent of individual websites.
                     `;
                 } else {

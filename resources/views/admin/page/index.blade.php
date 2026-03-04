@@ -51,7 +51,7 @@
                                         </span>
                                         <div class="page-title-subheading">
                                             @if(isset($isMainSite) && $isMainSite)
-                                                Manage pages for the main platform site (fundconnects.com)
+                                                Manage pages for the main platform site (brandallco.com)
                                             @elseif(isset($website) && $website)
                                                 Manage pages for {{ $website->name }} ({{ $website->domain }})
                                             @else
@@ -116,7 +116,7 @@
                                     <h5><i class="fas fa-info-circle"></i> How Pages Work</h5>
                                     <div class="row">
                                         <div class="col-md-4">
-                                            <strong>🌐 Main Site Pages (fundconnects.com):</strong>
+                                            <strong>🌐 Main Site Pages (brandallco.com):</strong>
                                             <ul class="mb-0 mt-2">
                                                 <li>Accessible only on main domain</li>
                                                 <li>Independent of individual websites</li>
@@ -203,9 +203,9 @@
                                                         @if(isset($isMainSite) && $isMainSite)
                                                             <td>
                                                                 @if($item->is_homepage)
-                                                                    <code>fundconnects.com</code>
+                                                                    <code>brandallco.com</code>
                                                                 @else
-                                                                    <code>fundconnects.com/page/{{ str_replace(' ', '-', strtolower($item->name)) }}</code>
+                                                                    <code>brandallco.com/page/{{ str_replace(' ', '-', strtolower($item->name)) }}</code>
                                                                 @endif
                                                             </td>
                                                         @endif
