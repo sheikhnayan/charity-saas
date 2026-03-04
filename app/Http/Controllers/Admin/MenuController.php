@@ -8,14 +8,45 @@ use App\Models\Menu;
 use App\Models\MenuItem;
 use App\Models\Page;
 use App\Models\Website;
+use Illuminate\Support\Facades\Auth;
 
 class MenuController extends Controller
 {
+    private function resolveWebsite()
+    {
+        if (Auth::check() && Auth::user()->website_id) {
+            $website = Website::find(Auth::user()->website_id);
+            if ($website) {
+                return $website;
+            }
+        }
+
+        $domain = request()->getHost();
+
+        $website = Website::where('domain', $domain)->first();
+        if ($website) {
+            return $website;
+        }
+
+        $website = Website::where('domain', 'www.' . $domain)->first();
+        if ($website) {
+            return $website;
+        }
+
+        $website = Website::where('domain', str_replace('www.', '', $domain))->first();
+        if ($website) {
+            return $website;
+        }
+
+        return Website::first();
+    }
+
     public function index()
     {
-        $url = url()->current();
-        $domain = parse_url($url, PHP_URL_HOST);
-        $website = Website::where('domain', $domain)->firstOrFail();
+        $website = $this->resolveWebsite();
+        if (!$website) {
+            return redirect()->back()->with('error', 'No website found to manage menus.');
+        }
         
         $menus = Menu::where('website_id', $website->id)->with('allItems')->get();
         
@@ -24,9 +55,10 @@ class MenuController extends Controller
 
     public function create()
     {
-        $url = url()->current();
-        $domain = parse_url($url, PHP_URL_HOST);
-        $website = Website::where('domain', $domain)->firstOrFail();
+        $website = $this->resolveWebsite();
+        if (!$website) {
+            return redirect()->back()->with('error', 'No website found to manage menus.');
+        }
         
         return view('admin.menus.create', compact('website'));
     }
@@ -39,9 +71,10 @@ class MenuController extends Controller
             'status' => 'boolean',
         ]);
 
-        $url = url()->current();
-        $domain = parse_url($url, PHP_URL_HOST);
-        $website = Website::where('domain', $domain)->firstOrFail();
+        $website = $this->resolveWebsite();
+        if (!$website) {
+            return redirect()->back()->with('error', 'No website found to create menu.');
+        }
 
         $validated['website_id'] = $website->id;
         $validated['status'] = $request->has('status') ? 1 : 0;
@@ -54,10 +87,11 @@ class MenuController extends Controller
     public function edit($id)
     {
         $menu = Menu::with(['allItems.page'])->findOrFail($id);
-        
-        $url = url()->current();
-        $domain = parse_url($url, PHP_URL_HOST);
-        $website = Website::where('domain', $domain)->firstOrFail();
+
+        $website = $this->resolveWebsite();
+        if (!$website) {
+            return redirect()->back()->with('error', 'No website found to edit menu.');
+        }
         
         $pages = Page::where('website_id', $website->id)
                      ->where('status', 1)
