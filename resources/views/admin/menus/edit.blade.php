@@ -29,11 +29,12 @@
     .dd3-handle:before { content: '≡'; display: block; position: absolute; left: 0; top: 8px; width: 100%; text-align: center; text-indent: 0; color: #fff; font-size: 20px; font-weight: normal; }
     .dd3-handle:hover { background: #ccc; }
     
-    .menu-item-actions { float: right; }
-    .menu-item-actions .btn { padding: 2px 8px; font-size: 12px; margin-left: 5px; }
-    .menu-item-info { display: block; }
+    .menu-item-actions { margin-left: auto; display: flex; gap: 5px; }
+    .menu-item-actions .btn { padding: 4px 8px; font-size: 12px; white-space: nowrap; }
+    .menu-item-info { display: block; flex: 1; }
     .menu-item-title { font-weight: bold; color: #333; }
     .menu-item-url { font-size: 12px; color: #666; margin-left: 10px; }
+    .dd3-content { display: flex !important; align-items: center !important; min-height: 45px; }
     .add-menu-item-card { border: 2px dashed #ddd; background: #f9f9f9; }
 </style>
 
@@ -235,13 +236,16 @@ $(document).ready(function() {
         var newItem = `
             <li class="dd-item dd3-item" data-id="${newId}" data-page-id="${pageId || ''}" data-url="${url}" data-title="${title}" data-target="${target}" data-css-classes="${cssClasses}">
                 <div class="dd-handle dd3-handle"></div>
-                <div class="dd3-content">
+                <div class="dd3-content d-flex align-items-center justify-content-between">
                     <span class="menu-item-info">
                         <span class="menu-item-title">${title}</span>
                         <span class="menu-item-url">${url}</span>
                     </span>
-                    <span class="menu-item-actions">
-                        <button class="btn btn-sm btn-danger delete-item" type="button">
+                    <span class="menu-item-actions ms-auto">
+                        <button class="btn btn-sm btn-warning edit-item" type="button" title="Edit">
+                            <i class="fas fa-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger delete-item" type="button" title="Delete">
                             <i class="fas fa-trash"></i>
                         </button>
                     </span>
@@ -250,7 +254,11 @@ $(document).ready(function() {
         `;
 
         $('#menu-nestable > .dd-list').append(newItem);
-        $('#menu-nestable').nestable('init');
+        $('#menu-nestable').nestable('destroy');
+        $('#menu-nestable').nestable({
+            maxDepth: 3,
+            group: 1
+        });
 
         // Clear form
         $('#page-select').val('');
