@@ -724,6 +724,19 @@ Route::group(['prefix' => 'admins', 'middleware' => ['auth',admin::class]], func
 
     Route::post('/footer/store',[AdminController::class, 'store_footer'])->name('admin.footer.store');
 
+    // Menu Builder Routes
+    Route::prefix('menus')->name('admin.menus.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\MenuController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\Admin\MenuController::class, 'create'])->name('create');
+        Route::post('/store', [\App\Http\Controllers\Admin\MenuController::class, 'store'])->name('store');
+        Route::get('/{id}/edit', [\App\Http\Controllers\Admin\MenuController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [\App\Http\Controllers\Admin\MenuController::class, 'update'])->name('update');
+        Route::delete('/{id}', [\App\Http\Controllers\Admin\MenuController::class, 'destroy'])->name('destroy');
+        Route::post('/{id}/update-items', [\App\Http\Controllers\Admin\MenuController::class, 'updateMenuItems'])->name('update-items');
+        Route::post('/{id}/add-item', [\App\Http\Controllers\Admin\MenuController::class, 'addItem'])->name('add-item');
+        Route::delete('/{id}/remove-item/{itemId}', [\App\Http\Controllers\Admin\MenuController::class, 'removeItem'])->name('remove-item');
+    });
+
     // Newsletter management routes
     Route::get('/newsletter',[AdminController::class, 'newsletter_index'])->name('admin.newsletter');
     Route::get('/newsletter/{website_id}',[AdminController::class, 'newsletter_manage'])->name('admin.newsletter.manage');

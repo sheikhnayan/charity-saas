@@ -57,6 +57,49 @@
             display: flex !important;
         }
     }
+    
+    /* Dropdown Menu Styling with Dynamic Colors */
+    .navbar-nav .dropdown-menu {
+        background-color: {{ $header->background ?? '#ffffff' }} !important;
+        border: 1px solid rgba(0,0,0,0.1);
+        border-radius: 4px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        margin-top: 0;
+        padding: 0.5rem 0;
+    }
+    
+    .navbar-nav .dropdown-item {
+        color: {{ $header->color ?? '#333333' }} !important;
+        padding: 0.5rem 1.5rem;
+        transition: all 0.3s ease;
+        @if(isset($header) && $header && $header->menu_font_family)
+        font-family: '{{ $header->menu_font_family }}', sans-serif !important;
+        @endif
+    }
+    
+    .navbar-nav .dropdown-item:hover,
+    .navbar-nav .dropdown-item:focus {
+        background-color: rgba(0,0,0,0.05) !important;
+        color: {{ $header->color ?? '#333333' }} !important;
+    }
+    
+    .navbar-nav .dropdown-toggle::after {
+        border-top-color: {{ $header->color ?? '#333333' }} !important;
+    }
+    
+    /* Mobile Dropdown Styles */
+    @media (max-width: 1199px) {
+        .navbar-nav .dropdown-menu {
+            background-color: transparent !important;
+            border: none;
+            box-shadow: none;
+            padding-left: 1rem;
+        }
+        
+        .navbar-nav .dropdown-item {
+            padding: 0.5rem 0;
+        }
+    }
 </style>
 <!-- Navigation Bar -->
     <nav class="navbar navbar-expand-xl {{ $header->floating == 1 ? 'fixed-top' : 'non-float'}} bg-primary" style="background-color: {{ $header->background }} !important;">
@@ -107,14 +150,64 @@
                                 </li>
                         @endif
                     @else
-                        {{-- Fundraiser website: Multi-page navigation (current behavior) --}}
-                        @foreach ($check->pages->sortBy('position') as $item)
-                            @if ($item->status == 1 && $item->show_in_menu)
-                                <li class="nav-item">
-                                    <a class="nav-link active" aria-current="page" href="/page/{{ str_replace(' ', '-', strtolower($item->name)) }}" style="color:{{ $header->color }} !important;">{{ $item->name }}</a>
-                                </li>
-                            @endif
-                        @endforeach
+                        {{-- Fundraiser website: Check for menu builder first, fallback to pages --}}
+                        @php
+                            $primaryMenu = \App\Models\Menu::where('website_id', $check->id)
+                                ->where('location', 'primary')
+                                ->where('status', 1)
+                                ->with(['items.children', 'items.page'])
+                                ->first();
+                        @endphp
+                        
+                        @if($primaryMenu && $primaryMenu->items->count() > 0)
+                            {{-- Use Menu Builder --}}
+                            @foreach($primaryMenu->items as $menuItem)
+                                @if($menuItem->children->count() > 0)
+                                    {{-- Dropdown Menu --}}
+                                    <li class="nav-item dropdown">
+                                        <a class="nav-link dropdown-toggle {{ $menuItem->css_classes }}" 
+                                           href="#" 
+                                           id="navbarDropdown{{ $menuItem->id }}" 
+                                           role="button" 
+                                           data-bs-toggle="dropdown" 
+                                           aria-expanded="false"
+                                           style="color:{{ $header->color }} !important;">
+                                            {{ $menuItem->title }}
+                                        </a>
+                                        <ul class="dropdown-menu" aria-labelledby="navbarDropdown{{ $menuItem->id }}">
+                                            @foreach($menuItem->children as $child)
+                                                <li>
+                                                    <a class="dropdown-item {{ $child->css_classes }}" 
+                                                       href="{{ $child->url }}" 
+                                                       target="{{ $child->target }}">
+                                                        {{ $child->title }}
+                                                    </a>
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    </li>
+                                @else
+                                    {{-- Regular Menu Item --}}
+                                    <li class="nav-item">
+                                        <a class="nav-link {{ $menuItem->css_classes }}" 
+                                           href="{{ $menuItem->url }}" 
+                                           target="{{ $menuItem->target }}"
+                                           style="color:{{ $header->color }} !important;">
+                                            {{ $menuItem->title }}
+                                        </a>
+                                    </li>
+                                @endif
+                            @endforeach
+                        @else
+                            {{-- Fallback: Old behavior - show pages --}}
+                            @foreach ($check->pages->sortBy('position') as $item)
+                                @if ($item->status == 1 && $item->show_in_menu)
+                                    <li class="nav-item">
+                                        <a class="nav-link active" aria-current="page" href="/page/{{ str_replace(' ', '-', strtolower($item->name)) }}" style="color:{{ $header->color }} !important;">{{ $item->name }}</a>
+                                    </li>
+                                @endif
+                            @endforeach
+                        @endif
                     @endif
                     {{-- <li class="nav-item">
                         <a class="nav-link active" aria-current="page" href="/auction" style="color:{{ $header->color }} !important">Auction</a>

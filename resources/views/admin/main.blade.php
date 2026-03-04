@@ -364,7 +364,7 @@
   </li>
 
   <!-- Website Section -->
-  <li class="menu-item {{ request()->is('admins/website', 'admins/page', 'admins/templates*', 'admins/menu', 'admins/footer', 'admins/newsletter*', 'admins/comments') ? 'active open' : '' }}">
+  <li class="menu-item {{ request()->is('admins/website', 'admins/page', 'admins/templates*', 'admins/menu', 'admins/menus*', 'admins/footer', 'admins/newsletter*', 'admins/comments') ? 'active open' : '' }}">
     <a href="javascript:void(0);" class="menu-link menu-toggle">
       <i class="menu-icon tf-icons bx bx-globe"></i>
       <div class="text-truncate">Website</div>
@@ -374,6 +374,7 @@
       <li class="menu-item {{ request()->is('admins/page') ? 'active' : '' }}"><a href="/admins/page" class="menu-link"><div class="text-truncate">Page</div></a></li>
       <li class="menu-item {{ request()->is('admins/templates*') ? 'active' : '' }}"><a href="/admins/templates" class="menu-link"><div class="text-truncate">Page Template</div></a></li>
       <li class="menu-item {{ request()->is('admins/menu') ? 'active' : '' }}"><a href="/admins/menu" class="menu-link"><div class="text-truncate">Header</div></a></li>
+      <li class="menu-item {{ request()->is('admins/menus*') ? 'active' : '' }}"><a href="{{ route('admin.menus.index') }}" class="menu-link"><div class="text-truncate">Menu Builder</div></a></li>
       <li class="menu-item {{ request()->is('admins/footer') ? 'active' : '' }}"><a href="/admins/footer" class="menu-link"><div class="text-truncate">Footer</div></a></li>
       <li class="menu-item {{ request()->is('admins/newsletter*') ? 'active' : '' }}"><a href="/admins/newsletter" class="menu-link"><div class="text-truncate">Newsletter</div></a></li>
       <li class="menu-item {{ request()->is('admins/comments') ? 'active' : '' }}"><a href="/admins/comments" class="menu-link"><div class="text-truncate">Comments</div></a></li>
