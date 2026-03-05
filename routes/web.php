@@ -74,8 +74,17 @@ Route::get('/api/metals/prices', function () {
         try {
             $debugLog[] = '🔄 Attempting metals.live primary API';
             
+            // Try with explicit cURL options to handle SNI issues on production servers
             $response = \Illuminate\Support\Facades\Http::timeout(10)
-                ->withoutVerifying()  // Production servers often have different SSL config
+                ->withoutVerifying()
+                ->withOptions([
+                    'curl' => [
+                        CURLOPT_SSL_VERIFYHOST => 0,
+                        CURLOPT_SSL_VERIFYPEER => 0,
+                        CURLOPT_SSLVERSION => CURL_SSLVERSION_TLSv1_2,
+                        CURLOPT_ENCODING => 'gzip,deflate',
+                    ]
+                ])
                 ->acceptJson()
                 ->get('https://api.metals.live/v1/spot/price?codes=XAU,XAG,XPT,XPD');
 
@@ -114,6 +123,13 @@ Route::get('/api/metals/prices', function () {
             try {
                 $response = \Illuminate\Support\Facades\Http::timeout(10)
                     ->withoutVerifying()
+                    ->withOptions([
+                        'curl' => [
+                            CURLOPT_SSL_VERIFYHOST => 0,
+                            CURLOPT_SSL_VERIFYPEER => 0,
+                            CURLOPT_SSLVERSION => CURL_SSLVERSION_TLSv1_2,
+                        ]
+                    ])
                     ->acceptJson()
                     ->get('https://data-asg.goldprice.org/dbXRates/USD');
 
@@ -156,38 +172,56 @@ Route::get('/api/metals/prices', function () {
             }
         }
 
-        // Tertiary source: Twelve Data (has free spot prices for metals)
+        // Tertiary source: CoinGecko API (has precious metals in USD)
         if (in_array(null, $normalized, true)) {
-            $debugLog[] = '🔄 Attempting Twelve Data API';
+            $debugLog[] = '🔄 Attempting CoinGecko API (precious metals)';
             try {
-                $metals = ['XAUUSD' => 'gold', 'XAGUSD' => 'silver', 'XPTUSD' => 'platinum', 'XPDUSD' => 'palladium'];
-                
-                foreach ($metals as $symbol => $metal) {
-                    if ($normalized[$metal] !== null) {
-                        continue;
-                    }
-                    
-                    $response = \Illuminate\Support\Facades\Http::timeout(5)
-                        ->withoutVerifying()
-                        ->acceptJson()
-                        ->get('https://api.twelvedata.com/price', [
-                            'symbol' => $symbol,
-                            'apikey' => 'demo'  // Free tier with demo key
-                        ]);
+                $response = \Illuminate\Support\Facades\Http::timeout(10)
+                    ->withoutVerifying()
+                    ->withOptions([
+                        'curl' => [
+                            CURLOPT_SSL_VERIFYHOST => 0,
+                            CURLOPT_SSL_VERIFYPEER => 0,
+                            CURLOPT_SSLVERSION => CURL_SSLVERSION_TLSv1_2,
+                        ]
+                    ])
+                    ->acceptJson()
+                    ->get('https://api.coingecko.com/api/v3/simple/price', [
+                        'ids' => 'gold,silver,platinum,palladium',
+                        'vs_currencies' => 'usd',
+                        'include_market_cap' => 'false',
+                        'include_24hr_vol' => 'false',
+                        'include_ath' => 'false',
+                    ]);
 
-                    if ($response->ok()) {
-                        $data = $response->json();
-                        $price = $data['price'] ?? null;
+                $debugLog[] = '📥 CoinGecko Response Status: ' . $response->status();
+
+                if ($response->ok()) {
+                    $data = $response->json();
+                    $debugLog[] = '✓ CoinGecko returned data';
+                    
+                    $metalMap = [
+                        'gold' => 'gold',
+                        'silver' => 'silver',
+                        'platinum' => 'platinum',
+                        'palladium' => 'palladium',
+                    ];
+
+                    foreach ($metalMap as $code => $metal) {
+                        if ($normalized[$metal] !== null) {
+                            continue;
+                        }
+                        
+                        $price = $data[$code]['usd'] ?? null;
                         if (is_numeric($price) && $price > 0) {
                             $normalized[$metal] = (float) $price;
                             $gotRealData = true;
-                            $debugLog[] = "  ✓ {$metal}: \${$price}/oz (from Twelve Data)";
+                            $debugLog[] = "  ✓ {$metal}: \${$price}/oz (from CoinGecko)";
                         }
                     }
                 }
             } catch (\Throwable $e) {
-                // Silent fail for tertiary source
-                $debugLog[] = '⚠️  Twelve Data Exception: ' . $e->getMessage();
+                $debugLog[] = '⚠️  CoinGecko Exception: ' . $e->getMessage();
             }
         }
         
