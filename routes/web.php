@@ -66,6 +66,9 @@ Route::get('/api/metals/prices', function () {
             'platinum' => null,
             'palladium' => null,
         ];
+        
+        // Track if we got any real data from APIs (not fallbacks)
+        $gotRealData = false;
 
         // Primary source: Yahoo Finance futures quotes via scheb/yahoo-finance-api package
         try {
@@ -97,6 +100,7 @@ Route::get('/api/metals/prices', function () {
                 $price = $quote->getRegularMarketPrice();
                 if ($price !== null && $price > 0) {
                     $normalized[$market] = (float) $price;
+                    $gotRealData = true;  // Mark that we got real data
                     $debugLog[] = "  ✓ {$market}: \${$price}/oz (symbol: {$symbol})";
                 }
             }
@@ -134,6 +138,7 @@ Route::get('/api/metals/prices', function () {
                                 $value = $entry[$metal] ?? null;
                                 if (is_numeric($value) && $value > 0) {
                                     $normalized[$metal] = (float) $value;
+                                    $gotRealData = true;  // Mark that we got real data
                                     $debugLog[] = "  ✓ {$metal}: \${$value}/oz (from metals.live)";
                                 }
                             }
@@ -171,6 +176,7 @@ Route::get('/api/metals/prices', function () {
                         $goldPrice = (float) $data['price'];
                         if ($normalized['gold'] === null && $goldPrice > 0) {
                             $normalized['gold'] = $goldPrice;
+                            $gotRealData = true;  // Mark that we got real data
                             $debugLog[] = "  ✓ gold: \${$goldPrice}/oz (from goldapi.io)";
                         }
                     }
@@ -189,6 +195,7 @@ Route::get('/api/metals/prices', function () {
                                 $price = (float) $response->json()['price'];
                                 if ($price > 0) {
                                     $normalized[$metal] = $price;
+                                    $gotRealData = true;  // Mark that we got real data
                                     $debugLog[] = "  ✓ {$metal}: \${$price}/oz (from goldapi.io)";
                                 }
                             }
@@ -233,14 +240,15 @@ Route::get('/api/metals/prices', function () {
             }
         }
         
-        // Re-check if all prices are now present
-        $allPresent = !in_array(null, $normalized, true);
+        // Determine source based on whether we got real API data
+        // Don't mark as "live" if we only have fallback prices
+        $source = $gotRealData ? 'live' : 'fallback';
         
         return [
             'prices_per_ounce_usd' => $normalized,
-            'source' => $allPresent ? 'live' : 'partial',
+            'source' => $source,
             'last_updated' => now()->toIso8601String(),
-            'debug' => $isDebug ? $debugLog : null,
+            'debug' => $debugLog,  // ALWAYS send debug logs temporarily to diagnose production issue
         ];
     });
 

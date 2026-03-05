@@ -9663,8 +9663,9 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                             
                             console.log('📊 [Metals API] Full API Response:', data);
                             console.log('💰 [Metals API] Price Source:', data.source || 'unknown', 
-                                       data.source === 'live' ? '(REAL PRICES)' : 
-                                       data.source === 'partial' ? '(SOME DEMO PRICES)' : '(DEMO PRICES)');
+                                       data.source === 'live' ? '(✓ REAL MARKET PRICES)' : 
+                                       data.source === 'fallback' ? '(⚠ FALLBACK - APIs FAILED)' :
+                                       data.source === 'partial' ? '(⚠ SOME DEMO PRICES)' : '(⚠ DEMO PRICES)');
                             
                             // Show backend debug log if available
                             if (data.debug && Array.isArray(data.debug)) {
@@ -9690,8 +9691,8 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                             if (elUpdated) {
                                 const stamp = data.last_updated ? new Date(data.last_updated) : new Date();
                                 const sourceLabel = data.source === 'live' 
-                                    ? '✓ Live' 
-                                    : '⚠ Approximate';
+                                    ? '✓ Live Market' 
+                                    : '⚠ Approximate (API Failed)';
                                 elUpdated.textContent = `Updated: ${stamp.toLocaleTimeString()} (${sourceLabel})`;
                             }
                         } catch (error) {
