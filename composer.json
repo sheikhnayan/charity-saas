@@ -17,6 +17,7 @@
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
         "phpoffice/phpspreadsheet": "^5.2",
+        "scheb/yahoo-finance-api": "5.0",
         "simplesoftwareio/simple-qrcode": "*",
         "spatie/browsershot": "^5.2",
         "stripe/stripe-php": "^17.4"

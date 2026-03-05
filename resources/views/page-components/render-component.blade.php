@@ -9653,8 +9653,29 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
 
                     async function loadPrices() {
                         try {
+                            console.log('🔄 [Metals API] Fetching prices from:', '{{ route('api.metals.prices') }}');
+                            
                             const response = await fetch('{{ route('api.metals.prices') }}', { headers: { 'Accept': 'application/json' } });
+                            
+                            console.log('📥 [Metals API] Response status:', response.status, response.statusText);
+                            
                             const data = await response.json();
+                            
+                            console.log('📊 [Metals API] Full API Response:', data);
+                            console.log('💰 [Metals API] Price Source:', data.source || 'unknown', 
+                                       data.source === 'live' ? '(REAL PRICES)' : 
+                                       data.source === 'partial' ? '(SOME DEMO PRICES)' : '(DEMO PRICES)');
+                            
+                            // Show backend debug log if available
+                            if (data.debug && Array.isArray(data.debug)) {
+                                console.log('🔍 [Metals API] Backend Debug Log:');
+                                data.debug.forEach(log => console.log('   ', log));
+                            }
+                            
+                            console.log('🥇 [Metals API] Gold Price:', data.prices_per_ounce_usd?.gold, '$/oz', 
+                                       '→', data.prices_per_gram_usd?.gold, '$/g');
+                            console.log('🥈 [Metals API] Silver Price:', data.prices_per_ounce_usd?.silver, '$/oz',
+                                       '→', data.prices_per_gram_usd?.silver, '$/g');
 
                             if (!data || !data.success) {
                                 throw new Error('Invalid prices payload');
@@ -9668,13 +9689,15 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
 
                             if (elUpdated) {
                                 const stamp = data.last_updated ? new Date(data.last_updated) : new Date();
-                                elUpdated.textContent = `Updated: ${stamp.toLocaleTimeString()}`;
+                                const sourceLabel = data.source === 'live' ? '✓ REAL' : '⚠ DEMO';
+                                elUpdated.textContent = `Updated: ${stamp.toLocaleTimeString()} (${sourceLabel})`;
                             }
                         } catch (error) {
+                            console.error('❌ [Metals API] Price load failed:', error);
+                            console.error('❌ [Metals API] Error details:', error.message, error.stack);
                             if (elRate) {
                                 elRate.textContent = 'Unable to fetch live prices right now';
                             }
-                            console.error('Scrap calculator price load failed:', error);
                         }
                     }
 
