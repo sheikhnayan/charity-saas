@@ -9386,6 +9386,314 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
             </script>
         @break
 
+        @case('scrap-metal-calculator')
+            @php
+                $scrap = $component['scrapCalculatorData'] ?? [];
+                $title = $scrap['title'] ?? 'Scrap Metal Calculator';
+                $subtitle = $scrap['subtitle'] ?? 'Estimate your payout using live market prices.';
+                $visibleMetals = $scrap['visibleMetals'] ?? ['gold', 'silver', 'platinum', 'palladium'];
+                if (!is_array($visibleMetals) || empty($visibleMetals)) {
+                    $visibleMetals = ['gold'];
+                }
+                $allowedMetals = ['gold', 'silver', 'platinum', 'palladium'];
+                $visibleMetals = array_values(array_filter($visibleMetals, function ($m) use ($allowedMetals) {
+                    return in_array($m, $allowedMetals, true);
+                }));
+                if (empty($visibleMetals)) {
+                    $visibleMetals = ['gold'];
+                }
+
+                $defaultMetal = $scrap['defaultMetal'] ?? 'gold';
+                if (!in_array($defaultMetal, $visibleMetals, true)) {
+                    $defaultMetal = $visibleMetals[0];
+                }
+
+                $weightUnit = $scrap['weightUnit'] ?? 'grams';
+                $defaultWeight = $scrap['defaultWeight'] ?? '10';
+                $defaultPurity = $scrap['defaultPurity'] ?? '18';
+                $showLivePrices = isset($scrap['showLivePrices']) ? (bool) $scrap['showLivePrices'] : true;
+                $refreshSeconds = (int) ($scrap['refreshSeconds'] ?? 60);
+                if ($refreshSeconds < 15) {
+                    $refreshSeconds = 15;
+                }
+                if ($refreshSeconds > 600) {
+                    $refreshSeconds = 600;
+                }
+            @endphp
+
+            <div class="scrap-calc-shell" id="{{ $componentId }}-scrap" style="{{ $styleStr }}">
+                <style>
+                    #{{ $componentId }}-scrap {
+                        border: 1px solid rgba(15, 23, 42, 0.08);
+                        border-radius: 16px;
+                        background: linear-gradient(160deg, #ffffff 0%, #f8fafc 100%);
+                        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+                        padding: 22px;
+                    }
+
+                    #{{ $componentId }}-scrap .scrap-header h3 {
+                        margin: 0;
+                        font-size: 24px;
+                        font-weight: 700;
+                        color: #0f172a;
+                    }
+
+                    #{{ $componentId }}-scrap .scrap-header p {
+                        margin: 8px 0 0;
+                        color: #64748b;
+                        font-size: 14px;
+                    }
+
+                    #{{ $componentId }}-scrap .scrap-toolbar {
+                        display: grid;
+                        grid-template-columns: repeat(2, minmax(0, 1fr));
+                        gap: 12px;
+                        margin-top: 16px;
+                    }
+
+                    #{{ $componentId }}-scrap .scrap-field label {
+                        display: block;
+                        font-size: 12px;
+                        color: #334155;
+                        margin-bottom: 6px;
+                        font-weight: 600;
+                    }
+
+                    #{{ $componentId }}-scrap .scrap-field select,
+                    #{{ $componentId }}-scrap .scrap-field input {
+                        width: 100%;
+                        border: 1px solid #cbd5e1;
+                        border-radius: 10px;
+                        padding: 10px 12px;
+                        font-size: 14px;
+                        background: #fff;
+                    }
+
+                    #{{ $componentId }}-scrap .scrap-prices {
+                        margin-top: 16px;
+                        display: grid;
+                        grid-template-columns: repeat(2, minmax(0, 1fr));
+                        gap: 10px;
+                    }
+
+                    #{{ $componentId }}-scrap .price-card {
+                        border: 1px solid #e2e8f0;
+                        border-radius: 12px;
+                        background: #fff;
+                        padding: 10px;
+                    }
+
+                    #{{ $componentId }}-scrap .price-card .metal {
+                        font-size: 12px;
+                        text-transform: capitalize;
+                        color: #475569;
+                    }
+
+                    #{{ $componentId }}-scrap .price-card .value {
+                        font-size: 16px;
+                        font-weight: 700;
+                        color: #0f766e;
+                    }
+
+                    #{{ $componentId }}-scrap .result {
+                        margin-top: 16px;
+                        border: 1px solid #99f6e4;
+                        background: linear-gradient(160deg, #ecfeff 0%, #f0fdfa 100%);
+                        border-radius: 12px;
+                        padding: 14px;
+                    }
+
+                    #{{ $componentId }}-scrap .result .label {
+                        font-size: 12px;
+                        color: #0f766e;
+                        margin-bottom: 4px;
+                    }
+
+                    #{{ $componentId }}-scrap .result .amount {
+                        font-size: 28px;
+                        font-weight: 800;
+                        color: #115e59;
+                        line-height: 1.1;
+                    }
+
+                    #{{ $componentId }}-scrap .meta {
+                        margin-top: 8px;
+                        font-size: 12px;
+                        color: #64748b;
+                        display: flex;
+                        justify-content: space-between;
+                        gap: 10px;
+                        flex-wrap: wrap;
+                    }
+
+                    @media (max-width: 768px) {
+                        #{{ $componentId }}-scrap {
+                            padding: 16px;
+                        }
+
+                        #{{ $componentId }}-scrap .scrap-toolbar,
+                        #{{ $componentId }}-scrap .scrap-prices {
+                            grid-template-columns: 1fr;
+                        }
+
+                        #{{ $componentId }}-scrap .result .amount {
+                            font-size: 24px;
+                        }
+                    }
+                </style>
+
+                <div class="scrap-header">
+                    <h3>{{ $title }}</h3>
+                    <p>{{ $subtitle }}</p>
+                </div>
+
+                <div class="scrap-toolbar">
+                    <div class="scrap-field">
+                        <label>Metal</label>
+                        <select id="{{ $componentId }}-metal">
+                            @foreach($visibleMetals as $metal)
+                                <option value="{{ $metal }}" {{ $defaultMetal === $metal ? 'selected' : '' }}>{{ ucfirst($metal) }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="scrap-field">
+                        <label>Unit</label>
+                        <select id="{{ $componentId }}-unit">
+                            <option value="grams" {{ $weightUnit === 'grams' ? 'selected' : '' }}>Grams (g)</option>
+                            <option value="ounces" {{ $weightUnit === 'ounces' ? 'selected' : '' }}>Troy Ounces (oz)</option>
+                        </select>
+                    </div>
+                    <div class="scrap-field">
+                        <label>Weight</label>
+                        <input id="{{ $componentId }}-weight" type="number" min="0" step="0.01" value="{{ $defaultWeight }}">
+                    </div>
+                    <div class="scrap-field">
+                        <label>Purity (Karats)</label>
+                        <select id="{{ $componentId }}-purity">
+                            <option value="24" {{ $defaultPurity === '24' ? 'selected' : '' }}>24K</option>
+                            <option value="22" {{ $defaultPurity === '22' ? 'selected' : '' }}>22K</option>
+                            <option value="18" {{ ($defaultPurity === '18' || !$defaultPurity) ? 'selected' : '' }}>18K</option>
+                            <option value="14" {{ $defaultPurity === '14' ? 'selected' : '' }}>14K</option>
+                            <option value="10" {{ $defaultPurity === '10' ? 'selected' : '' }}>10K</option>
+                            <option value="9" {{ $defaultPurity === '9' ? 'selected' : '' }}>9K</option>
+                        </select>
+                    </div>
+                </div>
+
+                @if($showLivePrices)
+                    <div class="scrap-prices" id="{{ $componentId }}-price-cards"></div>
+                @endif
+
+                <div class="result">
+                    <div class="label">Estimated Scrap Value (USD)</div>
+                    <div class="amount" id="{{ $componentId }}-result">$0.00</div>
+                    <div class="meta">
+                        <span id="{{ $componentId }}-rate">Loading live price...</span>
+                        <span id="{{ $componentId }}-updated">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                (function() {
+                    const allowedMetals = @json($visibleMetals);
+                    const defaultMetal = @json($defaultMetal);
+                    const refreshMs = {{ $refreshSeconds }} * 1000;
+                    const showCards = {{ $showLivePrices ? 'true' : 'false' }};
+
+                    const elMetal = document.getElementById('{{ $componentId }}-metal');
+                    const elUnit = document.getElementById('{{ $componentId }}-unit');
+                    const elWeight = document.getElementById('{{ $componentId }}-weight');
+                    const elPurity = document.getElementById('{{ $componentId }}-purity');
+                    const elResult = document.getElementById('{{ $componentId }}-result');
+                    const elRate = document.getElementById('{{ $componentId }}-rate');
+                    const elUpdated = document.getElementById('{{ $componentId }}-updated');
+                    const elCards = document.getElementById('{{ $componentId }}-price-cards');
+
+                    let prices = {
+                        ounce: {},
+                        gram: {}
+                    };
+
+                    function formatMoney(value) {
+                        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value || 0);
+                    }
+
+                    function renderCards() {
+                        if (!showCards || !elCards) return;
+
+                        elCards.innerHTML = allowedMetals.map((metal) => {
+                            const perGram = prices.gram[metal];
+                            const value = perGram ? formatMoney(perGram) + '/g' : 'N/A';
+                            return `<div class="price-card"><div class="metal">${metal}</div><div class="value">${value}</div></div>`;
+                        }).join('');
+                    }
+
+                    function calculate() {
+                        const metal = elMetal ? elMetal.value : defaultMetal;
+                        const unit = elUnit ? elUnit.value : 'grams';
+                        const weight = parseFloat(elWeight ? elWeight.value : 0) || 0;
+                        const karats = parseFloat(elPurity ? elPurity.value : 18) || 18;
+                        const purityRatio = Math.max(0, Math.min(24, karats)) / 24;
+
+                        const rate = unit === 'ounces' ? prices.ounce[metal] : prices.gram[metal];
+                        const estimated = (rate || 0) * weight * purityRatio;
+
+                        if (elResult) {
+                            elResult.textContent = formatMoney(estimated);
+                        }
+
+                        if (elRate) {
+                            const suffix = unit === 'ounces' ? '/oz' : '/g';
+                            elRate.textContent = rate
+                                ? `Live ${metal} rate: ${formatMoney(rate)}${suffix}`
+                                : `Live ${metal} rate unavailable`;
+                        }
+                    }
+
+                    async function loadPrices() {
+                        try {
+                            const response = await fetch('{{ route('api.metals.prices') }}', { headers: { 'Accept': 'application/json' } });
+                            const data = await response.json();
+
+                            if (!data || !data.success) {
+                                throw new Error('Invalid prices payload');
+                            }
+
+                            prices.ounce = data.prices_per_ounce_usd || {};
+                            prices.gram = data.prices_per_gram_usd || {};
+
+                            renderCards();
+                            calculate();
+
+                            if (elUpdated) {
+                                const stamp = data.last_updated ? new Date(data.last_updated) : new Date();
+                                elUpdated.textContent = `Updated: ${stamp.toLocaleTimeString()}`;
+                            }
+                        } catch (error) {
+                            if (elRate) {
+                                elRate.textContent = 'Unable to fetch live prices right now';
+                            }
+                            console.error('Scrap calculator price load failed:', error);
+                        }
+                    }
+
+                    [elMetal, elUnit, elWeight, elPurity].forEach((el) => {
+                        if (!el) return;
+                        el.addEventListener('input', calculate);
+                        el.addEventListener('change', calculate);
+                    });
+
+                    if (elMetal && !allowedMetals.includes(elMetal.value) && allowedMetals.length > 0) {
+                        elMetal.value = allowedMetals[0];
+                    }
+
+                    loadPrices();
+                    setInterval(loadPrices, refreshMs);
+                })();
+            </script>
+        @break
+
         @default
             {{-- Fallback for any unhandled component types --}}
             <div style="{{ $styleStr }}">

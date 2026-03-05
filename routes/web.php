@@ -54,6 +54,125 @@ Route::get('/fonts/custom.css', [\App\Http\Controllers\Admin\FontController::cla
 // Public API endpoint for getting teachers by website
 Route::get('/api/teachers', [\App\Http\Controllers\Admin\TeacherController::class, 'getTeachers'])->name('api.teachers');
 
+// Public metals price API (used by scrap calculator component)
+Route::get('/api/metals/prices', function () {
+    $cacheKey = 'metals_live_prices_usd';
+
+    $payload = \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function () {
+        $normalized = [
+            'gold' => null,
+            'silver' => null,
+            'platinum' => null,
+            'palladium' => null,
+        ];
+
+        // Primary source: Yahoo Finance futures quotes (USD per troy ounce)
+        try {
+            $response = \Illuminate\Support\Facades\Http::timeout(8)
+                ->withoutVerifying()
+                ->acceptJson()
+                ->get('https://query1.finance.yahoo.com/v7/finance/quote', [
+                    'symbols' => 'GC=F,SI=F,PL=F,PA=F',
+                ]);
+
+            if ($response->ok()) {
+                $results = $response->json('quoteResponse.result', []);
+                $symbolMap = [
+                    'GC=F' => 'gold',
+                    'SI=F' => 'silver',
+                    'PL=F' => 'platinum',
+                    'PA=F' => 'palladium',
+                ];
+
+                foreach ($results as $quote) {
+                    $symbol = $quote['symbol'] ?? '';
+                    $market = $symbolMap[$symbol] ?? null;
+                    if (!$market) {
+                        continue;
+                    }
+
+                    $price = $quote['regularMarketPrice'] ?? null;
+                    if (is_numeric($price) && $price > 0) {
+                        $normalized[$market] = (float) $price;
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('Metals price primary source failed', ['message' => $e->getMessage()]);
+        }
+
+        // Secondary source fallback: metals.live spot endpoint (best-effort)
+        if (in_array(null, $normalized, true)) {
+            try {
+                $fallbackResponse = \Illuminate\Support\Facades\Http::timeout(8)
+                    ->withoutVerifying()
+                    ->acceptJson()
+                    ->get('https://api.metals.live/v1/spot');
+
+                if ($fallbackResponse->ok()) {
+                    $spotData = $fallbackResponse->json();
+                    if (is_array($spotData)) {
+                        foreach ($spotData as $entry) {
+                            if (!is_array($entry)) {
+                                continue;
+                            }
+
+                            foreach (['gold', 'silver', 'platinum', 'palladium'] as $metal) {
+                                if ($normalized[$metal] !== null) {
+                                    continue;
+                                }
+
+                                $value = $entry[$metal] ?? null;
+                                if (is_numeric($value) && $value > 0) {
+                                    $normalized[$metal] = (float) $value;
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Metals price fallback source failed', ['message' => $e->getMessage()]);
+            }
+        }
+
+        $allPresent = !in_array(null, $normalized, true);
+        
+        // Final fallback: Use demo prices if both sources failed (development only)
+        if (!$allPresent && env('APP_DEBUG')) {
+            \Log::info('Using fallback demo prices for metals calculator');
+            $normalized = [
+                'gold' => 2045.50,
+                'silver' => 27.30,
+                'platinum' => 1050.75,
+                'palladium' => 1125.25,
+            ];
+        }
+        
+        return [
+            'prices_per_ounce_usd' => $normalized,
+            'source' => ($allPresent || env('APP_DEBUG')) ? 'live' : 'partial',
+            'last_updated' => now()->toIso8601String(),
+        ];
+    });
+
+    $pricesPerOunce = $payload['prices_per_ounce_usd'] ?? [];
+    $pricesPerGram = [];
+    $gramsPerTroyOunce = 31.1034768;
+    foreach ($pricesPerOunce as $metal => $pricePerOunce) {
+        $pricesPerGram[$metal] = is_numeric($pricePerOunce)
+            ? round(((float) $pricePerOunce) / $gramsPerTroyOunce, 4)
+            : null;
+    }
+
+    return response()->json([
+        'success' => true,
+        'prices_per_ounce_usd' => $pricesPerOunce,
+        'prices_per_gram_usd' => $pricesPerGram,
+        'source' => $payload['source'] ?? 'partial',
+        'last_updated' => $payload['last_updated'] ?? now()->toIso8601String(),
+    ]);
+})->name('api.metals.prices');
+
 // Analytics Routes
 Route::middleware(['auth', \App\Http\Middleware\admin::class])->group(function () {
     Route::get('/analytics', [DashboardController::class, 'index'])->name('analytics.dashboard');

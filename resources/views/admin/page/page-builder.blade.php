@@ -2842,6 +2842,7 @@ button a:hover {
                 <div class="component-item" draggable="true" data-type="property-category-carousel"><i class="fas fa-building me-2"></i>Property Category Carousel</div>
                 <div class="component-item" draggable="true" data-type="property-listing-grid"><i class="fas fa-th me-2"></i>Property Listing Grid</div>
                 <div class="component-item" draggable="true" data-type="product-listing-grid"><i class="fas fa-grip-horizontal me-2"></i>Product Listing Grid</div>
+                <div class="component-item" draggable="true" data-type="scrap-metal-calculator"><i class="fas fa-calculator me-2"></i>Scrap Metal Calculator</div>
                 {{-- <div class="component-item" draggable="true" data-type="heading"><i class="fas fa-heading me-2"></i>Heading</div> --}}
                 </div>
             </div>
@@ -4322,6 +4323,50 @@ button a:hover {
                     </div>
                 </div>
             `;
+            break;
+
+        case 'scrap-metal-calculator':
+            content = document.createElement('div');
+            content.className = 'scrap-metal-calculator-component';
+            content._scrapCalculatorData = {
+                title: 'Scrap Metal Calculator',
+                subtitle: 'Estimate your payout using live market prices.',
+                visibleMetals: ['gold', 'silver', 'platinum', 'palladium'],
+                defaultMetal: 'gold',
+                weightUnit: 'grams',
+                defaultWeight: '10',
+                defaultPurity: '75',
+                showLivePrices: true,
+                refreshSeconds: 60
+            };
+
+            content.renderScrapCalculatorPreview = function() {
+                const d = content._scrapCalculatorData || {};
+                const shown = Array.isArray(d.visibleMetals) ? d.visibleMetals : ['gold'];
+                const chips = shown.map((m) => `<span style="display:inline-block;background:#eef2ff;color:#3730a3;border-radius:999px;padding:4px 10px;font-size:11px;margin:2px;text-transform:capitalize;">${m}</span>`).join('');
+
+                content.innerHTML = `
+                    <div style="border:1px solid #e5e7eb; border-radius:12px; background:linear-gradient(135deg,#ffffff,#f8fafc); padding:18px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+                            <div>
+                                <h4 style="margin:0 0 6px;color:#0f172a;font-size:18px;">${d.title || 'Scrap Metal Calculator'}</h4>
+                                <p style="margin:0;color:#64748b;font-size:13px;">${d.subtitle || ''}</p>
+                            </div>
+                            <div style="font-size:12px;color:#059669;font-weight:600;">Live Prices</div>
+                        </div>
+                        <div style="margin-top:12px;">${chips}</div>
+                        <div style="margin-top:14px;border:1px dashed #cbd5e1;border-radius:10px;padding:12px;background:#fff;">
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:#334155;">
+                                <div>Weight: ${d.defaultWeight || '0'} ${d.weightUnit === 'ounces' ? 'oz' : 'g'}</div>
+                                <div>Purity: ${d.defaultPurity || '75'}%</div>
+                            </div>
+                            <div style="margin-top:10px;font-size:20px;font-weight:700;color:#0f766e;">Estimated Value: --</div>
+                        </div>
+                    </div>
+                `;
+            };
+
+            content.renderScrapCalculatorPreview();
             break;
 
         case 'image':
@@ -8117,7 +8162,8 @@ break;
             'text-images': { icon: 'fa-align-left', name: 'Text & Images' },
             'feature-grid': { icon: 'fa-th-large', name: 'Feature Grid' },
             'investment-tier': { icon: 'fa-coins', name: 'Investment Tier' },
-            'statistics-metric': { icon: 'fa-chart-line', name: 'Statistics Metric' }
+            'statistics-metric': { icon: 'fa-chart-line', name: 'Statistics Metric' },
+            'scrap-metal-calculator': { icon: 'fa-calculator', name: 'Scrap Metal Calculator' }
         };
         
         return componentInfo[type] || { icon: 'fa-cube', name: 'Component' };
@@ -8343,6 +8389,90 @@ break;
                 </div>
             `;
         break;
+
+            case 'scrap-metal-calculator':
+            const scrapData = content._scrapCalculatorData || {
+                title: 'Scrap Metal Calculator',
+                subtitle: 'Estimate your payout using live market prices.',
+                visibleMetals: ['gold', 'silver', 'platinum', 'palladium'],
+                defaultMetal: 'gold',
+                weightUnit: 'grams',
+                defaultWeight: '10',
+                defaultPurity: '75',
+                showLivePrices: true,
+                refreshSeconds: 60
+            };
+
+            const showMetal = (metal) => Array.isArray(scrapData.visibleMetals) && scrapData.visibleMetals.includes(metal);
+            specificControls = `
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" value="${scrapData.title || ''}" onchange="updateScrapCalculatorField('title', this.value)">
+                </div>
+                <div class="form-group">
+                    <label>Subtitle</label>
+                    <input type="text" value="${scrapData.subtitle || ''}" onchange="updateScrapCalculatorField('subtitle', this.value)">
+                </div>
+
+                <div class="form-group">
+                    <label>Metals To Show</label>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+                        <label><input type="checkbox" ${showMetal('gold') ? 'checked' : ''} onchange="toggleScrapCalculatorMetal('gold', this.checked)"> Gold</label>
+                        <label><input type="checkbox" ${showMetal('silver') ? 'checked' : ''} onchange="toggleScrapCalculatorMetal('silver', this.checked)"> Silver</label>
+                        <label><input type="checkbox" ${showMetal('platinum') ? 'checked' : ''} onchange="toggleScrapCalculatorMetal('platinum', this.checked)"> Platinum</label>
+                        <label><input type="checkbox" ${showMetal('palladium') ? 'checked' : ''} onchange="toggleScrapCalculatorMetal('palladium', this.checked)"> Palladium</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Default Metal</label>
+                    <select onchange="updateScrapCalculatorField('defaultMetal', this.value)">
+                        <option value="gold" ${scrapData.defaultMetal === 'gold' ? 'selected' : ''}>Gold</option>
+                        <option value="silver" ${scrapData.defaultMetal === 'silver' ? 'selected' : ''}>Silver</option>
+                        <option value="platinum" ${scrapData.defaultMetal === 'platinum' ? 'selected' : ''}>Platinum</option>
+                        <option value="palladium" ${scrapData.defaultMetal === 'palladium' ? 'selected' : ''}>Palladium</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Default Weight Unit</label>
+                    <select onchange="updateScrapCalculatorField('weightUnit', this.value)">
+                        <option value="grams" ${scrapData.weightUnit === 'grams' ? 'selected' : ''}>Grams</option>
+                        <option value="ounces" ${scrapData.weightUnit === 'ounces' ? 'selected' : ''}>Troy Ounces</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Default Weight</label>
+                    <input type="number" min="0" step="0.01" value="${scrapData.defaultWeight || '10'}" onchange="updateScrapCalculatorField('defaultWeight', this.value)">
+                </div>
+
+                <div class="form-group">
+                    <label>Default Purity (Karats)</label>
+                    <select onchange="updateScrapCalculatorField('defaultPurity', this.value)">
+                        <option value="24" ${scrapData.defaultPurity === '24' ? 'selected' : ''}>24K (100% Pure)</option>
+                        <option value="22" ${scrapData.defaultPurity === '22' ? 'selected' : ''}>22K (91.67% Pure)</option>
+                        <option value="18" ${(scrapData.defaultPurity === '18' || !scrapData.defaultPurity) ? 'selected' : ''}>18K (75% Pure)</option>
+                        <option value="14" ${scrapData.defaultPurity === '14' ? 'selected' : ''}>14K (58.33% Pure)</option>
+                        <option value="10" ${scrapData.defaultPurity === '10' ? 'selected' : ''}>10K (41.67% Pure)</option>
+                        <option value="9" ${scrapData.defaultPurity === '9' ? 'selected' : ''}>9K (37.5% Pure)</option>
+                    </select>
+                    <small style="display:block;margin-top:4px;color:#666;">Standard karat values for gold purity</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Live Price Refresh (seconds)</label>
+                    <input type="number" min="15" max="600" step="5" value="${scrapData.refreshSeconds || 60}" onchange="updateScrapCalculatorField('refreshSeconds', this.value)">
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" ${scrapData.showLivePrices ? 'checked' : ''} onchange="updateScrapCalculatorField('showLivePrices', this.checked)">
+                        Show live metal price cards
+                    </label>
+                </div>
+            `;
+            break;
 
             case 'button':
             const buttonData = content._buttonData || {
@@ -16079,6 +16209,9 @@ function applyResponsiveStyles() {
           case 'statistics-metric':
             data.statisticsData = content._statisticsData;
             break;
+          case 'scrap-metal-calculator':
+            data.scrapCalculatorData = content._scrapCalculatorData || {};
+            break;
           case 'custom-form':
             data.customFormFields = content._customFormFields;
             break;
@@ -16239,6 +16372,11 @@ function applyResponsiveStyles() {
                                                     };
                                                 } catch (e) { console.error('Failed to parse nested statistics html', e); }
                                             }
+                      break;
+                    case 'scrap-metal-calculator':
+                      if (compContent._scrapCalculatorData) {
+                        compData.scrapCalculatorData = compContent._scrapCalculatorData;
+                      }
                       break;
                     case 'full-width-text-image':
                       if (compContent._fwtiData) {
@@ -17253,6 +17391,26 @@ function applyResponsiveStyles() {
                 if (data.responsiveStyles) actualContent._responsiveStyles = data.responsiveStyles;
                 break;
 
+            case 'scrap-metal-calculator':
+                actualContent._scrapCalculatorData = Object.assign({
+                    title: 'Scrap Metal Calculator',
+                    subtitle: 'Estimate your payout using live market prices.',
+                    visibleMetals: ['gold', 'silver', 'platinum', 'palladium'],
+                    defaultMetal: 'gold',
+                    weightUnit: 'grams',
+                    defaultWeight: '10',
+                    defaultPurity: '75',
+                    showLivePrices: true,
+                    refreshSeconds: 60
+                }, data.scrapCalculatorData || {});
+                if (actualContent.renderScrapCalculatorPreview) {
+                    actualContent.renderScrapCalculatorPreview();
+                }
+                if (data.style) Object.assign(actualContent.style, data.style);
+                if (data.wrapperStyle) Object.assign(actualComponent.style, data.wrapperStyle);
+                if (data.responsiveStyles) actualContent._responsiveStyles = data.responsiveStyles;
+                break;
+
             case 'custom-form':
                 actualContent._customFormFields = data.customFormFields || [];
                 actualContent.renderCustomForm();
@@ -17844,6 +18002,26 @@ function applyResponsiveStyles() {
             if (data.style) {
               Object.assign(content.style, data.style);
             }
+            if (data.wrapperStyle) Object.assign(component.style, data.wrapperStyle);
+            if (data.responsiveStyles) content._responsiveStyles = data.responsiveStyles;
+            break;
+
+          case 'scrap-metal-calculator':
+            content._scrapCalculatorData = Object.assign({
+                title: 'Scrap Metal Calculator',
+                subtitle: 'Estimate your payout using live market prices.',
+                visibleMetals: ['gold', 'silver', 'platinum', 'palladium'],
+                defaultMetal: 'gold',
+                weightUnit: 'grams',
+                defaultWeight: '10',
+                defaultPurity: '75',
+                showLivePrices: true,
+                refreshSeconds: 60
+            }, data.scrapCalculatorData || {});
+            if (content.renderScrapCalculatorPreview) {
+                content.renderScrapCalculatorPreview();
+            }
+            if (data.style) Object.assign(content.style, data.style);
             if (data.wrapperStyle) Object.assign(component.style, data.wrapperStyle);
             if (data.responsiveStyles) content._responsiveStyles = data.responsiveStyles;
             break;
@@ -18944,6 +19122,12 @@ function applyResponsiveStyles() {
             componentData.featureGridData = content._featureGridData;
           }
           break;
+
+        case 'scrap-metal-calculator':
+          if (content._scrapCalculatorData) {
+            componentData.scrapCalculatorData = content._scrapCalculatorData;
+          }
+          break;
         
         case 'text':
           // Get text content from canvas preview element (NOT property panel editor)
@@ -19730,6 +19914,74 @@ function applyResponsiveStyles() {
         content.renderSimpleComments();
         
         // Update the property panel to reflect changes
+        updatePropertyPanel();
+    }
+
+    // Scrap metal calculator functions
+    function updateScrapCalculatorField(field, value) {
+        if (!selectedComponent) return;
+        const content = getContentElement(selectedComponent);
+        if (!content) return;
+
+        if (!content._scrapCalculatorData) {
+            content._scrapCalculatorData = {
+                title: 'Scrap Metal Calculator',
+                subtitle: 'Estimate your payout using live market prices.',
+                visibleMetals: ['gold', 'silver', 'platinum', 'palladium'],
+                defaultMetal: 'gold',
+                weightUnit: 'grams',
+                defaultWeight: '10',
+                defaultPurity: '75',
+                showLivePrices: true,
+                refreshSeconds: 60
+            };
+        }
+
+        content._scrapCalculatorData[field] = value;
+
+        if (field === 'defaultMetal' && !content._scrapCalculatorData.visibleMetals.includes(value)) {
+            content._scrapCalculatorData.visibleMetals.push(value);
+        }
+
+        if (content.renderScrapCalculatorPreview) {
+            content.renderScrapCalculatorPreview();
+        }
+
+        updatePropertyPanel();
+    }
+
+    function toggleScrapCalculatorMetal(metal, enabled) {
+        if (!selectedComponent) return;
+        const content = getContentElement(selectedComponent);
+        if (!content) return;
+
+        if (!content._scrapCalculatorData) {
+            return;
+        }
+
+        const current = Array.isArray(content._scrapCalculatorData.visibleMetals)
+            ? content._scrapCalculatorData.visibleMetals
+            : [];
+
+        let next = current.filter((m) => m !== metal);
+        if (enabled) {
+            next.push(metal);
+        }
+
+        if (next.length === 0) {
+            next = ['gold'];
+        }
+
+        content._scrapCalculatorData.visibleMetals = Array.from(new Set(next));
+
+        if (!content._scrapCalculatorData.visibleMetals.includes(content._scrapCalculatorData.defaultMetal)) {
+            content._scrapCalculatorData.defaultMetal = content._scrapCalculatorData.visibleMetals[0];
+        }
+
+        if (content.renderScrapCalculatorPreview) {
+            content.renderScrapCalculatorPreview();
+        }
+
         updatePropertyPanel();
     }
 
