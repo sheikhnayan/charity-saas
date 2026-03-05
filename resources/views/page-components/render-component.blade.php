@@ -9689,7 +9689,9 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
 
                             if (elUpdated) {
                                 const stamp = data.last_updated ? new Date(data.last_updated) : new Date();
-                                const sourceLabel = data.source === 'live' ? '✓ REAL' : '⚠ DEMO';
+                                const sourceLabel = data.source === 'live' 
+                                    ? '✓ Live' 
+                                    : '⚠ Approximate';
                                 elUpdated.textContent = `Updated: ${stamp.toLocaleTimeString()} (${sourceLabel})`;
                             }
                         } catch (error) {
