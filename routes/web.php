@@ -223,18 +223,18 @@ Route::get('/api/metals/prices', function () {
         
         // Fallback if still missing: Try alternative real commodity API
         if (in_array(null, $normalized, true)) {
-            $debugLog[] = '🔄 Attempting Tim's Precious Metals API';
+            $debugLog[] = '🔄 Attempting metals.live stream context retry';
             try {
                 $context = stream_context_create([
                     'ssl' => ['verify_peer' => false]
                 ]);
                 
-                // Tim's Precious Metals API (no auth required)
+                // Alternative endpoint from metals.live
                 $json = @file_get_contents('https://api.metals.live/v1/spot', false, $context);
                 
                 if ($json && strpos($json, '{') === 0) {
                     $data = json_decode($json, true);
-                    $debugLog[] = '✓ Tim API returned data';
+                    $debugLog[] = '✓ metals.live alternative returned data';
                     
                     // Map their response if available
                     $metalMap = ['gold' => 'gold', 'silver' => 'silver', 'platinum' => 'platinum', 'palladium' => 'palladium'];
@@ -242,15 +242,18 @@ Route::get('/api/metals/prices', function () {
                         if ($normalized[$metal] !== null) continue;
                         
                         $price = $data[$code] ?? null;
-                        if (is_numeric($price) && $price > 100 && $price < 5000) {
+                        $minMax = ['gold' => [500, 3500], 'silver' => [5, 200], 'platinum' => [500, 2000], 'palladium' => [500, 3000]];
+                        list($min, $max) = $minMax[$metal];
+                        
+                        if (is_numeric($price) && $price >= $min && $price <= $max) {
                             $normalized[$metal] = (float) $price;
                             $gotRealData = true;
-                            $debugLog[] = "  ✓ {$metal}: \${$price}/oz (Tim API)";
+                            $debugLog[] = "  ✓ {$metal}: \${$price}/oz (metals.live alt)";
                         }
                     }
                 }
             } catch (\Throwable $e) {
-                $debugLog[] = '⚠️  Tim API Exception: ' . $e->getMessage();
+                $debugLog[] = '⚠️  metals.live alternative Exception: ' . $e->getMessage();
             }
         }
         
