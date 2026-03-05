@@ -70,185 +70,148 @@ Route::get('/api/metals/prices', function () {
         // Track if we got any real data from APIs (not fallbacks)
         $gotRealData = false;
 
-        // Primary source: Yahoo Finance futures quotes via scheb/yahoo-finance-api package
+        // Primary source: Metals.live spot prices API (most reliable free source)
         try {
-            $debugLog[] = '🔄 Attempting Yahoo Finance API (via scheb package)';
+            $debugLog[] = '🔄 Attempting metals.live primary API';
             
-            // Create API client (SSL verification disabled only for local development)
-            $isLocal = env('APP_ENV') === 'local' || env('APP_DEBUG');
-            $clientOptions = $isLocal ? ['verify' => false] : [];
-            $client = \Scheb\YahooFinanceApi\ApiClientFactory::createApiClient($clientOptions);
-            
-            // Fetch quotes for all 4 metal futures symbols
-            $quotes = $client->getQuotes(['GC=F', 'SI=F', 'PL=F', 'PA=F']);
-            $debugLog[] = '✓ Yahoo Finance returned ' . count($quotes) . ' quotes';
-            
-            $symbolMap = [
-                'GC=F' => 'gold',
-                'SI=F' => 'silver',
-                'PL=F' => 'platinum',
-                'PA=F' => 'palladium',
-            ];
+            $response = \Illuminate\Support\Facades\Http::timeout(10)
+                ->withoutVerifying()  // Production servers often have different SSL config
+                ->acceptJson()
+                ->get('https://api.metals.live/v1/spot/price?codes=XAU,XAG,XPT,XPD');
 
-            foreach ($quotes as $quote) {
-                $symbol = $quote->getSymbol();
-                $market = $symbolMap[$symbol] ?? null;
-                if (!$market) {
-                    continue;
-                }
+            $debugLog[] = '📥 metals.live Response Status: ' . $response->status();
 
-                $price = $quote->getRegularMarketPrice();
-                if ($price !== null && $price > 0) {
-                    $normalized[$market] = (float) $price;
-                    $gotRealData = true;  // Mark that we got real data
-                    $debugLog[] = "  ✓ {$market}: \${$price}/oz (symbol: {$symbol})";
+            if ($response->ok()) {
+                $data = $response->json();
+                $debugLog[] = '✓ metals.live returned data';
+                
+                $metalMap = [
+                    'XAU' => 'gold',
+                    'XAG' => 'silver',
+                    'XPT' => 'platinum',
+                    'XPD' => 'palladium',
+                ];
+
+                foreach ($metalMap as $code => $metal) {
+                    $price = $data[$code] ?? null;
+                    if (is_numeric($price) && $price > 0) {
+                        $normalized[$metal] = (float) $price;
+                        $gotRealData = true;  // Mark that we got real data
+                        $debugLog[] = "  ✓ {$metal}: \${$price}/oz (from metals.live)";
+                    }
                 }
+            } else {
+                $debugLog[] = '❌ metals.live returned non-OK status: ' . $response->status();
             }
         } catch (\Throwable $e) {
-            $debugLog[] = '❌ Yahoo Finance Exception: ' . $e->getMessage();
-            \Log::warning('Metals price primary source (scheb package) failed', ['message' => $e->getMessage()]);
+            $debugLog[] = '❌ metals.live Exception: ' . $e->getMessage();
+            \Log::warning('Metals price primary source (metals.live) failed', ['message' => $e->getMessage()]);
         }
 
-        // Secondary source fallback: metals.live spot endpoint (best-effort)
+        // Secondary source: GoldPrice.org API (alternative free source)
         if (in_array(null, $normalized, true)) {
-            $debugLog[] = '🔄 Attempting metals.live fallback API (some prices missing)';
+            $debugLog[] = '🔄 Attempting goldprice.org fallback API';
             try {
-                $fallbackResponse = \Illuminate\Support\Facades\Http::timeout(8)
+                $response = \Illuminate\Support\Facades\Http::timeout(10)
                     ->withoutVerifying()
                     ->acceptJson()
-                    ->get('https://api.metals.live/v1/spot');
+                    ->get('https://data-asg.goldprice.org/dbXRates/USD');
 
-                $debugLog[] = '📥 metals.live Response Status: ' . $fallbackResponse->status();
+                $debugLog[] = '📥 goldprice.org Response Status: ' . $response->status();
 
-                if ($fallbackResponse->ok()) {
-                    $spotData = $fallbackResponse->json();
-                    $debugLog[] = '✓ metals.live returned data';
+                if ($response->ok()) {
+                    $data = $response->json();
+                    $debugLog[] = '✓ goldprice.org returned data';
                     
-                    if (is_array($spotData)) {
-                        foreach ($spotData as $entry) {
-                            if (!is_array($entry)) {
-                                continue;
+                    // goldprice.org returns array of records with flattop structure
+                    if (is_array($data) && count($data) > 0) {
+                        $record = $data[0];  // Get first record
+                        
+                        // Map their fields to our metals
+                        $rateMap = [
+                            'XAU' => 'gold',
+                            'XAG' => 'silver',
+                            'XPT' => 'platinum',
+                            'XPD' => 'palladium',
+                        ];
+
+                        foreach ($rateMap as $code => $metal) {
+                            if ($normalized[$metal] !== null) {
+                                continue;  // Skip if already have this price
                             }
-
-                            foreach (['gold', 'silver', 'platinum', 'palladium'] as $metal) {
-                                if ($normalized[$metal] !== null) {
-                                    continue;
-                                }
-
-                                $value = $entry[$metal] ?? null;
-                                if (is_numeric($value) && $value > 0) {
-                                    $normalized[$metal] = (float) $value;
-                                    $gotRealData = true;  // Mark that we got real data
-                                    $debugLog[] = "  ✓ {$metal}: \${$value}/oz (from metals.live)";
-                                }
+                            
+                            $price = $record[$code . 'rate'] ?? null;
+                            if (is_numeric($price) && $price > 0) {
+                                $normalized[$metal] = (float) $price;
+                                $gotRealData = true;  // Mark that we got real data
+                                $debugLog[] = "  ✓ {$metal}: \${$price}/oz (from goldprice.org)";
                             }
                         }
                     }
                 } else {
-                    $debugLog[] = '❌ metals.live returned non-OK status';
+                    $debugLog[] = '❌ goldprice.org returned non-OK status: ' . $response->status();
                 }
             } catch (\Throwable $e) {
-                $debugLog[] = '❌ metals.live Exception: ' . $e->getMessage();
-                \Log::warning('Metals price fallback source failed', ['message' => $e->getMessage()]);
+                $debugLog[] = '❌ goldprice.org Exception: ' . $e->getMessage();
             }
         }
 
-        // Third fallback: Free metals price API (metals-api.com or goldprice.org)
+        // Tertiary source: Twelve Data (has free spot prices for metals)
         if (in_array(null, $normalized, true)) {
-            $debugLog[] = '🔄 Attempting third fallback: goldapi.io free endpoint';
+            $debugLog[] = '🔄 Attempting Twelve Data API';
             try {
-                // Try goldapi.io public endpoint (no auth required for basic access)
-                $goldApiResponse = \Illuminate\Support\Facades\Http::timeout(8)
-                    ->withoutVerifying()
-                    ->withHeaders([
-                        'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                    ])
-                    ->get('https://www.goldapi.io/api/XAU/USD');
-
-                $debugLog[] = '📥 goldapi.io Response Status: ' . $goldApiResponse->status();
-
-                if ($goldApiResponse->ok()) {
-                    $data = $goldApiResponse->json();
-                    $debugLog[] = '✓ goldapi.io returned data';
-                    
-                    // goldapi.io returns price per troy ounce
-                    if (isset($data['price']) && is_numeric($data['price'])) {
-                        $goldPrice = (float) $data['price'];
-                        if ($normalized['gold'] === null && $goldPrice > 0) {
-                            $normalized['gold'] = $goldPrice;
-                            $gotRealData = true;  // Mark that we got real data
-                            $debugLog[] = "  ✓ gold: \${$goldPrice}/oz (from goldapi.io)";
-                        }
-                    }
-                }
+                $metals = ['XAUUSD' => 'gold', 'XAGUSD' => 'silver', 'XPTUSD' => 'platinum', 'XPDUSD' => 'palladium'];
                 
-                // Try additional metals if still missing
-                foreach (['silver' => 'XAG', 'platinum' => 'XPT', 'palladium' => 'XPD'] as $metal => $symbol) {
-                    if ($normalized[$metal] === null) {
-                        try {
-                            $response = \Illuminate\Support\Facades\Http::timeout(5)
-                                ->withoutVerifying()
-                                ->withHeaders(['User-Agent' => 'Mozilla/5.0'])
-                                ->get("https://www.goldapi.io/api/{$symbol}/USD");
-                            
-                            if ($response->ok() && isset($response->json()['price'])) {
-                                $price = (float) $response->json()['price'];
-                                if ($price > 0) {
-                                    $normalized[$metal] = $price;
-                                    $gotRealData = true;  // Mark that we got real data
-                                    $debugLog[] = "  ✓ {$metal}: \${$price}/oz (from goldapi.io)";
-                                }
-                            }
-                        } catch (\Throwable $e) {
-                            // Silent fail for individual metals
+                foreach ($metals as $symbol => $metal) {
+                    if ($normalized[$metal] !== null) {
+                        continue;
+                    }
+                    
+                    $response = \Illuminate\Support\Facades\Http::timeout(5)
+                        ->withoutVerifying()
+                        ->acceptJson()
+                        ->get('https://api.twelvedata.com/price', [
+                            'symbol' => $symbol,
+                            'apikey' => 'demo'  // Free tier with demo key
+                        ]);
+
+                    if ($response->ok()) {
+                        $data = $response->json();
+                        $price = $data['price'] ?? null;
+                        if (is_numeric($price) && $price > 0) {
+                            $normalized[$metal] = (float) $price;
+                            $gotRealData = true;
+                            $debugLog[] = "  ✓ {$metal}: \${$price}/oz (from Twelve Data)";
                         }
                     }
                 }
             } catch (\Throwable $e) {
-                $debugLog[] = '❌ goldapi.io Exception: ' . $e->getMessage();
-            }
-        }
-
-        $allPresent = !in_array(null, $normalized, true);
-        $isDebug = env('APP_DEBUG');
-        
-        // Final fallback: Use demo prices if all sources failed
-        // In production, this ensures calculator always works with approximate prices
-        if (!$allPresent) {
-            $debugLog[] = $isDebug 
-                ? '⚠️  Using DEMO FALLBACK prices (APP_DEBUG=true)'
-                : '⚠️  Using APPROXIMATE prices (all live sources failed)';
-            
-            \Log::warning('Metals calculator using fallback prices - all API sources failed');
-            
-            // Use reasonable fallback prices based on recent market averages
-            if ($normalized['gold'] === null) {
-                $normalized['gold'] = 2045.50;
-                $debugLog[] = "  📝 gold: \$2045.50/oz (fallback)";
-            }
-            if ($normalized['silver'] === null) {
-                $normalized['silver'] = 27.30;
-                $debugLog[] = "  📝 silver: \$27.30/oz (fallback)";
-            }
-            if ($normalized['platinum'] === null) {
-                $normalized['platinum'] = 1050.75;
-                $debugLog[] = "  📝 platinum: \$1050.75/oz (fallback)";
-            }
-            if ($normalized['palladium'] === null) {
-                $normalized['palladium'] = 1125.25;
-                $debugLog[] = "  📝 palladium: \$1125.25/oz (fallback)";
+                // Silent fail for tertiary source
+                $debugLog[] = '⚠️  Twelve Data Exception: ' . $e->getMessage();
             }
         }
         
-        // Determine source based on whether we got real API data
-        // Don't mark as "live" if we only have fallback prices
-        $source = $gotRealData ? 'live' : 'fallback';
+        // Final fallback: Hardcoded reasonable prices
+        if (!$gotRealData) {
+            $debugLog[] = '⚠️  All live sources failed, using approximate fallback prices';
+            \Log::warning('Metals calculator - all live API sources failed');
+            
+            $normalized = [
+                'gold' => 2045.50,
+                'silver' => 27.30,
+                'platinum' => 1050.75,
+                'palladium' => 1125.25,
+            ];
+            foreach ($normalized as $metal => $price) {
+                $debugLog[] = "  📝 {$metal}: \${$price}/oz (fallback)";
+            }
+        }
         
         return [
             'prices_per_ounce_usd' => $normalized,
-            'source' => $source,
+            'source' => $gotRealData ? 'live' : 'fallback',
             'last_updated' => now()->toIso8601String(),
-            'debug' => $debugLog,  // ALWAYS send debug logs temporarily to diagnose production issue
+            'debug' => $debugLog,  // Always send debug logs to diagnose issues
         ];
     });
 
@@ -265,7 +228,7 @@ Route::get('/api/metals/prices', function () {
         'success' => true,
         'prices_per_ounce_usd' => $pricesPerOunce,
         'prices_per_gram_usd' => $pricesPerGram,
-        'source' => $payload['source'] ?? 'partial',
+        'source' => $payload['source'] ?? 'fallback',
         'last_updated' => $payload['last_updated'] ?? now()->toIso8601String(),
         'debug' => $payload['debug'] ?? null,
     ]);
