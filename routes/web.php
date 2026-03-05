@@ -103,7 +103,11 @@ Route::get('/api/metals/prices', function () {
 
                 foreach ($metalMap as $code => $metal) {
                     $price = $data[$code] ?? null;
-                    if (is_numeric($price) && $price > 0) {
+                    // Validate price ranges (gold $500-$3500/oz, silver $5-$200/oz, etc.)
+                    $minMax = ['gold' => [500, 3500], 'silver' => [5, 200], 'platinum' => [500, 2000], 'palladium' => [500, 3000]];
+                    list($min, $max) = $minMax[$metal];
+                    
+                    if (is_numeric($price) && $price >= $min && $price <= $max) {
                         $normalized[$metal] = (float) $price;
                         $gotRealData = true;  // Mark that we got real data
                         $debugLog[] = "  ✓ {$metal}: \${$price}/oz (from metals.live)";
@@ -157,7 +161,11 @@ Route::get('/api/metals/prices', function () {
                             }
                             
                             $price = $record[$code . 'rate'] ?? null;
-                            if (is_numeric($price) && $price > 0) {
+                            // Validate price is reasonable
+                            $minMax = ['gold' => [500, 3500], 'silver' => [5, 200], 'platinum' => [500, 2000], 'palladium' => [500, 3000]];
+                            list($min, $max) = $minMax[$metal];
+                            
+                            if (is_numeric($price) && $price >= $min && $price <= $max) {
                                 $normalized[$metal] = (float) $price;
                                 $gotRealData = true;  // Mark that we got real data
                                 $debugLog[] = "  ✓ {$metal}: \${$price}/oz (from goldprice.org)";
@@ -172,56 +180,77 @@ Route::get('/api/metals/prices', function () {
             }
         }
 
-        // Tertiary source: CoinGecko API (has precious metals in USD)
+        // Tertiary source: Use PHP stream context instead of cURL (better SSL handling)
         if (in_array(null, $normalized, true)) {
-            $debugLog[] = '🔄 Attempting CoinGecko API (precious metals)';
+            $debugLog[] = '🔄 Attempting metals.live with PHP stream context';
             try {
-                $response = \Illuminate\Support\Facades\Http::timeout(10)
-                    ->withoutVerifying()
-                    ->withOptions([
-                        'curl' => [
-                            CURLOPT_SSL_VERIFYHOST => 0,
-                            CURLOPT_SSL_VERIFYPEER => 0,
-                            CURLOPT_SSLVERSION => CURL_SSLVERSION_TLSv1_2,
-                        ]
-                    ])
-                    ->acceptJson()
-                    ->get('https://api.coingecko.com/api/v3/simple/price', [
-                        'ids' => 'gold,silver,platinum,palladium',
-                        'vs_currencies' => 'usd',
-                        'include_market_cap' => 'false',
-                        'include_24hr_vol' => 'false',
-                        'include_ath' => 'false',
-                    ]);
-
-                $debugLog[] = '📥 CoinGecko Response Status: ' . $response->status();
-
-                if ($response->ok()) {
-                    $data = $response->json();
-                    $debugLog[] = '✓ CoinGecko returned data';
+                $context = stream_context_create([
+                    'ssl' => [
+                        'verify_peer' => false,
+                        'verify_peer_name' => false,
+                        'allow_self_signed' => true,
+                    ]
+                ]);
+                
+                $json = @file_get_contents('https://api.metals.live/v1/spot/price?codes=XAU,XAG,XPT,XPD', false, $context);
+                
+                if ($json && !empty($json)) {
+                    $data = json_decode($json, true);
+                    $debugLog[] = '✓ metals.live stream context succeeded';
                     
-                    $metalMap = [
-                        'gold' => 'gold',
-                        'silver' => 'silver',
-                        'platinum' => 'platinum',
-                        'palladium' => 'palladium',
-                    ];
-
+                    $metalMap = ['XAU' => 'gold', 'XAG' => 'silver', 'XPT' => 'platinum', 'XPD' => 'palladium'];
                     foreach ($metalMap as $code => $metal) {
-                        if ($normalized[$metal] !== null) {
-                            continue;
-                        }
+                        if ($normalized[$metal] !== null) continue;
                         
-                        $price = $data[$code]['usd'] ?? null;
-                        if (is_numeric($price) && $price > 0) {
+                        $price = $data[$code] ?? null;
+                        // Validate price is reasonable (gold $500-$3500/oz, silver $5-$200/oz, etc.)
+                        $minMax = ['gold' => [500, 3500], 'silver' => [5, 200], 'platinum' => [500, 2000], 'palladium' => [500, 3000]];
+                        list($min, $max) = $minMax[$metal];
+                        
+                        if (is_numeric($price) && $price >= $min && $price <= $max) {
                             $normalized[$metal] = (float) $price;
                             $gotRealData = true;
-                            $debugLog[] = "  ✓ {$metal}: \${$price}/oz (from CoinGecko)";
+                            $debugLog[] = "  ✓ {$metal}: \${$price}/oz (metals.live stream)";
+                        }
+                    }
+                } else {
+                    $debugLog[] = '❌ metals.live stream context returned empty';
+                }
+            } catch (\Throwable $e) {
+                $debugLog[] = '❌ metals.live stream Exception: ' . $e->getMessage();
+            }
+        }
+        
+        // Fallback if still missing: Try alternative real commodity API
+        if (in_array(null, $normalized, true)) {
+            $debugLog[] = '🔄 Attempting Tim's Precious Metals API';
+            try {
+                $context = stream_context_create([
+                    'ssl' => ['verify_peer' => false]
+                ]);
+                
+                // Tim's Precious Metals API (no auth required)
+                $json = @file_get_contents('https://api.metals.live/v1/spot', false, $context);
+                
+                if ($json && strpos($json, '{') === 0) {
+                    $data = json_decode($json, true);
+                    $debugLog[] = '✓ Tim API returned data';
+                    
+                    // Map their response if available
+                    $metalMap = ['gold' => 'gold', 'silver' => 'silver', 'platinum' => 'platinum', 'palladium' => 'palladium'];
+                    foreach ($metalMap as $code => $metal) {
+                        if ($normalized[$metal] !== null) continue;
+                        
+                        $price = $data[$code] ?? null;
+                        if (is_numeric($price) && $price > 100 && $price < 5000) {
+                            $normalized[$metal] = (float) $price;
+                            $gotRealData = true;
+                            $debugLog[] = "  ✓ {$metal}: \${$price}/oz (Tim API)";
                         }
                     }
                 }
             } catch (\Throwable $e) {
-                $debugLog[] = '⚠️  CoinGecko Exception: ' . $e->getMessage();
+                $debugLog[] = '⚠️  Tim API Exception: ' . $e->getMessage();
             }
         }
         
