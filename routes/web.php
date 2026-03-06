@@ -69,31 +69,35 @@ Route::get('/api/metals/prices', function () {
         
         // Track if we got any real data from APIs (not fallbacks)
         $gotRealData = false;
+        
+        // Price validation ranges
+        $priceRanges = [
+            'gold' => [500, 3500],
+            'silver' => [5, 200],
+            'platinum' => [500, 2000],
+            'palladium' => [500, 3000],
+        ];
 
-        // Primary source: Metals.live spot prices API (most reliable free source)
+        // Primary source: Frankfurter API (ECB precious metals data via exchange rates)
+        // This is the most reliable free API - maintained by major institution, no rate limits
         try {
-            $debugLog[] = '🔄 Attempting metals.live primary API';
+            $debugLog[] = '🔄 Primary: Frankfurter API (ECB data) - No key required';
             
-            // Try with explicit cURL options to handle SNI issues on production servers
             $response = \Illuminate\Support\Facades\Http::timeout(10)
-                ->withoutVerifying()
-                ->withOptions([
-                    'curl' => [
-                        CURLOPT_SSL_VERIFYHOST => 0,
-                        CURLOPT_SSL_VERIFYPEER => 0,
-                        CURLOPT_SSLVERSION => CURL_SSLVERSION_TLSv1_2,
-                        CURLOPT_ENCODING => 'gzip,deflate',
-                    ]
-                ])
                 ->acceptJson()
-                ->get('https://api.metals.live/v1/spot/price?codes=XAU,XAG,XPT,XPD');
+                ->get('https://api.frankfurter.dev/latest', [
+                    'from' => 'USD',
+                    'to' => 'XAU,XAG,XPT,XPD'
+                ]);
 
-            $debugLog[] = '📥 metals.live Response Status: ' . $response->status();
+            $debugLog[] = '📥 Frankfurter Response Status: ' . $response->status();
 
             if ($response->ok()) {
                 $data = $response->json();
-                $debugLog[] = '✓ metals.live returned data';
+                $rates = $data['rates'] ?? [];
+                $debugLog[] = '✓ Frankfurter returned rates';
                 
+                // Map metal codes to our names
                 $metalMap = [
                     'XAU' => 'gold',
                     'XAG' => 'silver',
@@ -102,52 +106,49 @@ Route::get('/api/metals/prices', function () {
                 ];
 
                 foreach ($metalMap as $code => $metal) {
-                    $price = $data[$code] ?? null;
-                    // Validate price ranges (gold $500-$3500/oz, silver $5-$200/oz, etc.)
-                    $minMax = ['gold' => [500, 3500], 'silver' => [5, 200], 'platinum' => [500, 2000], 'palladium' => [500, 3000]];
-                    list($min, $max) = $minMax[$metal];
+                    // Frankfurter returns USD to metal rates (e.g., 1 USD = 0.00048 XAU)
+                    // We need to invert: 1 ounce in USD = 1 / rate
+                    $rate = $rates[$code] ?? null;
                     
-                    if (is_numeric($price) && $price >= $min && $price <= $max) {
-                        $normalized[$metal] = (float) $price;
-                        $gotRealData = true;  // Mark that we got real data
-                        $debugLog[] = "  ✓ {$metal}: \${$price}/oz (from metals.live)";
+                    if ($rate && is_numeric($rate) && $rate > 0) {
+                        $price = 1 / $rate;  // Invert to get USD per ounce
+                        list($min, $max) = $priceRanges[$metal];
+                        
+                        if ($price >= $min && $price <= $max) {
+                            $normalized[$metal] = round($price, 2);
+                            $gotRealData = true;
+                            $debugLog[] = "  ✓ {$metal}: \${$normalized[$metal]}/oz (from Frankfurter/ECB)";
+                        } else {
+                            $debugLog[] = "  ⚠️  {$metal}: \${$price}/oz outside range [\${$min}-\${$max}]";
+                        }
                     }
                 }
             } else {
-                $debugLog[] = '❌ metals.live returned non-OK status: ' . $response->status();
+                $debugLog[] = '❌ Frankfurter returned status ' . $response->status();
             }
         } catch (\Throwable $e) {
-            $debugLog[] = '❌ metals.live Exception: ' . $e->getMessage();
-            \Log::warning('Metals price primary source (metals.live) failed', ['message' => $e->getMessage()]);
+            $debugLog[] = '❌ Frankfurter Exception: ' . $e->getMessage();
+            \Log::warning('Metals price primary (Frankfurter) failed', ['error' => $e->getMessage()]);
         }
 
-        // Secondary source: GoldPrice.org API (alternative free source)
+        // Secondary source: GoldPrice.org public JSON endpoint (backup)
         if (in_array(null, $normalized, true)) {
-            $debugLog[] = '🔄 Attempting goldprice.org fallback API';
+            $debugLog[] = '🔄 Secondary: GoldPrice.org public data';
             try {
                 $response = \Illuminate\Support\Facades\Http::timeout(10)
-                    ->withoutVerifying()
-                    ->withOptions([
-                        'curl' => [
-                            CURLOPT_SSL_VERIFYHOST => 0,
-                            CURLOPT_SSL_VERIFYPEER => 0,
-                            CURLOPT_SSLVERSION => CURL_SSLVERSION_TLSv1_2,
-                        ]
-                    ])
                     ->acceptJson()
                     ->get('https://data-asg.goldprice.org/dbXRates/USD');
 
-                $debugLog[] = '📥 goldprice.org Response Status: ' . $response->status();
+                $debugLog[] = '📥 GoldPrice.org Response Status: ' . $response->status();
 
                 if ($response->ok()) {
                     $data = $response->json();
-                    $debugLog[] = '✓ goldprice.org returned data';
+                    $debugLog[] = '✓ GoldPrice.org returned data';
                     
-                    // goldprice.org returns array of records with flattop structure
                     if (is_array($data) && count($data) > 0) {
-                        $record = $data[0];  // Get first record
+                        $record = $data[0];
                         
-                        // Map their fields to our metals
+                        // Map their API fields to our metals
                         $rateMap = [
                             'XAU' => 'gold',
                             'XAG' => 'silver',
@@ -161,106 +162,29 @@ Route::get('/api/metals/prices', function () {
                             }
                             
                             $price = $record[$code . 'rate'] ?? null;
-                            // Validate price is reasonable
-                            $minMax = ['gold' => [500, 3500], 'silver' => [5, 200], 'platinum' => [500, 2000], 'palladium' => [500, 3000]];
-                            list($min, $max) = $minMax[$metal];
+                            list($min, $max) = $priceRanges[$metal];
                             
                             if (is_numeric($price) && $price >= $min && $price <= $max) {
-                                $normalized[$metal] = (float) $price;
-                                $gotRealData = true;  // Mark that we got real data
-                                $debugLog[] = "  ✓ {$metal}: \${$price}/oz (from goldprice.org)";
+                                $normalized[$metal] = round($price, 2);
+                                $gotRealData = true;
+                                $debugLog[] = "  ✓ {$metal}: \${$normalized[$metal]}/oz (from GoldPrice.org)";
+                            } else {
+                                $debugLog[] = "  ⚠️  {$metal}: \${$price}/oz outside range [\${$min}-\${$max}]";
                             }
                         }
                     }
                 } else {
-                    $debugLog[] = '❌ goldprice.org returned non-OK status: ' . $response->status();
+                    $debugLog[] = '❌ GoldPrice.org returned status ' . $response->status();
                 }
             } catch (\Throwable $e) {
-                $debugLog[] = '❌ goldprice.org Exception: ' . $e->getMessage();
-            }
-        }
-
-        // Tertiary source: Use PHP stream context instead of cURL (better SSL handling)
-        if (in_array(null, $normalized, true)) {
-            $debugLog[] = '🔄 Attempting metals.live with PHP stream context';
-            try {
-                $context = stream_context_create([
-                    'ssl' => [
-                        'verify_peer' => false,
-                        'verify_peer_name' => false,
-                        'allow_self_signed' => true,
-                    ]
-                ]);
-                
-                $json = @file_get_contents('https://api.metals.live/v1/spot/price?codes=XAU,XAG,XPT,XPD', false, $context);
-                
-                if ($json && !empty($json)) {
-                    $data = json_decode($json, true);
-                    $debugLog[] = '✓ metals.live stream context succeeded';
-                    
-                    $metalMap = ['XAU' => 'gold', 'XAG' => 'silver', 'XPT' => 'platinum', 'XPD' => 'palladium'];
-                    foreach ($metalMap as $code => $metal) {
-                        if ($normalized[$metal] !== null) continue;
-                        
-                        $price = $data[$code] ?? null;
-                        // Validate price is reasonable (gold $500-$3500/oz, silver $5-$200/oz, etc.)
-                        $minMax = ['gold' => [500, 3500], 'silver' => [5, 200], 'platinum' => [500, 2000], 'palladium' => [500, 3000]];
-                        list($min, $max) = $minMax[$metal];
-                        
-                        if (is_numeric($price) && $price >= $min && $price <= $max) {
-                            $normalized[$metal] = (float) $price;
-                            $gotRealData = true;
-                            $debugLog[] = "  ✓ {$metal}: \${$price}/oz (metals.live stream)";
-                        }
-                    }
-                } else {
-                    $debugLog[] = '❌ metals.live stream context returned empty';
-                }
-            } catch (\Throwable $e) {
-                $debugLog[] = '❌ metals.live stream Exception: ' . $e->getMessage();
+                $debugLog[] = '❌ GoldPrice.org Exception: ' . $e->getMessage();
             }
         }
         
-        // Fallback if still missing: Try alternative real commodity API
-        if (in_array(null, $normalized, true)) {
-            $debugLog[] = '🔄 Attempting metals.live stream context retry';
-            try {
-                $context = stream_context_create([
-                    'ssl' => ['verify_peer' => false]
-                ]);
-                
-                // Alternative endpoint from metals.live
-                $json = @file_get_contents('https://api.metals.live/v1/spot', false, $context);
-                
-                if ($json && strpos($json, '{') === 0) {
-                    $data = json_decode($json, true);
-                    $debugLog[] = '✓ metals.live alternative returned data';
-                    
-                    // Map their response if available
-                    $metalMap = ['gold' => 'gold', 'silver' => 'silver', 'platinum' => 'platinum', 'palladium' => 'palladium'];
-                    foreach ($metalMap as $code => $metal) {
-                        if ($normalized[$metal] !== null) continue;
-                        
-                        $price = $data[$code] ?? null;
-                        $minMax = ['gold' => [500, 3500], 'silver' => [5, 200], 'platinum' => [500, 2000], 'palladium' => [500, 3000]];
-                        list($min, $max) = $minMax[$metal];
-                        
-                        if (is_numeric($price) && $price >= $min && $price <= $max) {
-                            $normalized[$metal] = (float) $price;
-                            $gotRealData = true;
-                            $debugLog[] = "  ✓ {$metal}: \${$price}/oz (metals.live alt)";
-                        }
-                    }
-                }
-            } catch (\Throwable $e) {
-                $debugLog[] = '⚠️  metals.live alternative Exception: ' . $e->getMessage();
-            }
-        }
-        
-        // Final fallback: Hardcoded reasonable prices
+        // Tertiary fallback: Hardcoded reasonable prices (safety net)
         if (!$gotRealData) {
-            $debugLog[] = '⚠️  All live sources failed, using approximate fallback prices';
-            \Log::warning('Metals calculator - all live API sources failed');
+            $debugLog[] = '⚠️  All live sources failed, using fallback prices (approximate)';
+            \Log::warning('Metals calculator - all live API sources failed, using fallback prices');
             
             $normalized = [
                 'gold' => 2045.50,
@@ -273,8 +197,16 @@ Route::get('/api/metals/prices', function () {
             }
         }
         
+        // Convert ounce prices to gram prices (1 ounce = 31.1035 grams)
+        $prices_per_gram = [];
+        foreach ($normalized as $metal => $price_per_oz) {
+            $prices_per_gram[$metal] = round($price_per_oz / 31.1035, 4);
+        }
+        
         return [
+            'success' => true,
             'prices_per_ounce_usd' => $normalized,
+            'prices_per_gram_usd' => $prices_per_gram,
             'source' => $gotRealData ? 'live' : 'fallback',
             'last_updated' => now()->toIso8601String(),
             'debug' => $debugLog,  // Always send debug logs to diagnose issues
