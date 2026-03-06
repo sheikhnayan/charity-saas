@@ -56,8 +56,8 @@ Route::get('/api/teachers', [\App\Http\Controllers\Admin\TeacherController::clas
 
 // Public metals price API (used by scrap calculator component)
 Route::get('/api/metals/prices', function () {
-    $cacheKey = 'metals_scrape_prices_usd_v3';
-    $lastGoodKey = 'metals_scrape_last_good_usd_v3';
+    $cacheKey = 'metals_scrape_prices_usd_v4';
+    $lastGoodKey = 'metals_scrape_last_good_usd_v4';
 
     $payload = \Illuminate\Support\Facades\Cache::remember($cacheKey, 120, function () use ($lastGoodKey) {
         $debugLog = [];
@@ -69,10 +69,10 @@ Route::get('/api/metals/prices', function () {
         ];
 
         $ranges = [
-            'gold' => [500, 3500],
-            'silver' => [5, 200],
-            'platinum' => [500, 2000],
-            'palladium' => [500, 3000],
+            'gold' => [500, 10000],
+            'silver' => [5, 500],
+            'platinum' => [500, 5000],
+            'palladium' => [500, 5000],
         ];
 
         // Maximum allowed drift from anchor price when validating scraped candidates.
@@ -92,100 +92,24 @@ Route::get('/api/metals/prices', function () {
 
         $lastGood = \Illuminate\Support\Facades\Cache::get($lastGoodKey, []);
 
-        $sourcesByMetal = [
-            'gold' => [
-                'https://goldprice.org/',
-                'https://goldprice.org/gold-price.html',
-                'https://data-asg.goldprice.org/dbXRates/USD',
-            ],
-            'silver' => [
-                'https://goldprice.org/',
-                'https://goldprice.org/silver-price.html',
-                'https://data-asg.goldprice.org/dbXRates/USD',
-            ],
-            'platinum' => [
-                'https://www.metal.com/Platinum',
-                'https://www.bullionbypost.co.uk/platinum-price/',
-                'https://www.kitco.com/charts/liveplatinum.html',
-            ],
-            'palladium' => [
-                'https://www.metal.com/Palladium',
-                'https://www.bullionbypost.co.uk/palladium-price/',
-                'https://www.kitco.com/charts/livepalladium.html',
-            ],
-        ];
-
-        $extractCandidates = static function (string $html, string $metal): array {
-            $text = html_entity_decode($html, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-            $compact = preg_replace('/\s+/', ' ', $text);
-            $clean = str_replace(',', '', $compact);
-
-            $keywords = [
-                'gold' => '(?:gold|xau)',
-                'silver' => '(?:silver|xag)',
-                'platinum' => '(?:platinum|xpt)',
-                'palladium' => '(?:palladium|xpd)',
-            ];
-
-            $needle = $keywords[$metal] ?? $metal;
-            $candidates = [];
-
-            $patterns = [
-                '#"price"\s*:\s*"?([0-9]+(?:\.[0-9]+)?)"?#i',
-                '#"last"\s*:\s*"?([0-9]+(?:\.[0-9]+)?)"?#i',
-                '#"xauPrice"\s*:\s*"?([0-9]+(?:\.[0-9]+)?)"?#i',
-                '#"xagPrice"\s*:\s*"?([0-9]+(?:\.[0-9]+)?)"?#i',
-                '#"XAU"\s*:\s*"?([0-9]+(?:\.[0-9]+)?)"?#i',
-                '#"XAG"\s*:\s*"?([0-9]+(?:\.[0-9]+)?)"?#i',
-                '#'.$needle.'[^0-9]{0,60}\$?\s*([0-9]+(?:\.[0-9]+)?)#i',
-                '#\$\s*([0-9]+(?:\.[0-9]+)?)\s*(?:usd)?\s*(?:/|per)\s*oz#i',
-                '#([0-9]+(?:\.[0-9]+)?)\s*(?:usd)?\s*(?:/|per)\s*oz[^a-z]{0,30}'.$needle.'#i',
-            ];
-
-            foreach ($patterns as $pattern) {
-                if (preg_match_all($pattern, $clean, $matches) && !empty($matches[1])) {
-                    foreach ($matches[1] as $raw) {
-                        if (is_numeric($raw)) {
-                            $candidates[] = (float) $raw;
-                        }
-                    }
-                }
+        $toOunce = static function (float $price, string $unit): ?float {
+            $u = strtolower(trim($unit));
+            if ($u === 'oz') {
+                return $price;
             }
-
-            return array_values(array_unique($candidates));
-        };
-
-        $selectBest = static function (array $candidates, array $range, float $anchor, float $maxDeviationPercent): ?float {
-            [$min, $max] = $range;
-            $valid = array_values(array_filter($candidates, static function ($value) use ($min, $max) {
-                return is_numeric($value) && $value >= $min && $value <= $max;
-            }));
-
-            if (empty($valid)) {
-                return null;
+            if ($u === 'lb') {
+                return $price * 16.0;
             }
-
-            $target = $anchor;
-
-            $anchored = array_values(array_filter($valid, static function ($value) use ($target, $maxDeviationPercent) {
-                if ($target <= 0) {
-                    return false;
-                }
-                $drift = abs($value - $target) / $target;
-                return $drift <= $maxDeviationPercent;
-            }));
-
-            // If nothing is close enough to anchor, reject this source as noisy.
-            if (empty($anchored)) {
-                return null;
+            if ($u === 'kg') {
+                return $price * 32.1507466;
             }
-
-            $valid = $anchored;
-            usort($valid, static function ($a, $b) use ($target) {
-                return abs($a - $target) <=> abs($b - $target);
-            });
-
-            return round((float) $valid[0], 2);
+            if ($u === 'g') {
+                return $price * 0.0321507466;
+            }
+            if ($u === 'mt') {
+                return $price * 32150.7466;
+            }
+            return null;
         };
 
         $hasScraped = false;
@@ -201,117 +125,59 @@ Route::get('/api/metals/prices', function () {
                 'Cache-Control' => 'no-cache',
             ]);
 
-        foreach ($sourcesByMetal as $metal => $urls) {
-            $debugLog[] = "SOURCES {$metal}: " . implode(', ', $urls);
-            $acceptedBySource = [];
+        $sourceUrl = 'https://www.dailymetalprice.com/';
+        $debugLog[] = 'SOURCE all-metals: ' . $sourceUrl;
+        try {
+            $response = $http->get($sourceUrl);
+            $debugLog[] = 'SCRAPE dailymetalprice: HTTP ' . $response->status();
 
-            foreach ($urls as $url) {
-                try {
-                    $response = $http->get($url);
-                    $debugLog[] = "SCRAPE {$metal}: {$url} -> HTTP {$response->status()}";
+            if ($response->ok()) {
+                $html = $response->body();
+                $rowsMatched = 0;
+                $map = [
+                    'gold' => 'gold',
+                    'silver' => 'silver',
+                    'platinum' => 'platinum',
+                    'palladium' => 'palladium',
+                ];
 
-                    if (!$response->ok()) {
-                        if ($response->status() === 403 && strpos($url, 'goldprice.org') !== false) {
-                            $debugLog[] = "SCRAPE {$metal}: goldprice blocked by remote firewall";
+                $pattern = '#<tr[^>]*>\s*<td[^>]*>\s*<a[^>]*>([^<]+)</a>\s*</td>\s*<td[^>]*>\s*\$\s*([0-9,]+(?:\.[0-9]+)?)\s*<span[^>]*>\s*([a-zA-Z]+)\s*</span>#is';
+                if (preg_match_all($pattern, $html, $matches, PREG_SET_ORDER)) {
+                    foreach ($matches as $m) {
+                        $name = strtolower(trim($m[1] ?? ''));
+                        $rawPrice = (float) str_replace(',', '', $m[2] ?? '0');
+                        $unit = strtolower(trim($m[3] ?? ''));
+
+                        if (!isset($map[$name])) {
+                            continue;
                         }
-                        continue;
-                    }
 
-                    // goldprice data feed: parse directly as JSON for high accuracy.
-                    if (strpos($url, 'data-asg.goldprice.org') !== false) {
-                        $json = $response->json();
-                        $record = null;
-                        if (is_array($json)) {
-                            $record = $json[0] ?? null;
-                        } elseif (is_array($json['items'] ?? null)) {
-                            $record = $json['items'][0] ?? null;
+                        $metal = $map[$name];
+                        $pricePerOunce = $toOunce($rawPrice, $unit);
+                        if ($pricePerOunce === null) {
+                            $debugLog[] = "SCRAPE {$metal}: unsupported unit {$unit}";
+                            continue;
                         }
 
-                        if (is_array($record)) {
-                            $fieldMap = [
-                                'gold' => ['xauPrice', 'XAU', 'XAUrate'],
-                                'silver' => ['xagPrice', 'XAG', 'XAGrate'],
-                                'platinum' => ['xptPrice', 'XPT', 'XPTrate'],
-                                'palladium' => ['xpdPrice', 'XPD', 'XPDrate'],
-                            ];
-
-                            foreach ($fieldMap[$metal] as $field) {
-                                $value = $record[$field] ?? null;
-                                if (!is_numeric($value)) {
-                                    continue;
-                                }
-
-                                $candidate = (float) $value;
-                                $anchor = isset($lastGood[$metal]) && is_numeric($lastGood[$metal])
-                                    ? (float) $lastGood[$metal]
-                                    : (float) $fallback[$metal];
-
-                                [$min, $max] = $ranges[$metal];
-                                $drift = $anchor > 0 ? abs($candidate - $anchor) / $anchor : 1;
-                                if ($candidate >= $min && $candidate <= $max && $drift <= $maxDeviation[$metal]) {
-                                    $acceptedBySource[] = round($candidate, 2);
-                                    $debugLog[] = "SCRAPE {$metal}: goldprice-json {$field}={$candidate}";
-                                } else {
-                                    $debugLog[] = "SCRAPE {$metal}: goldprice-json rejected {$field}={$candidate}";
-                                }
-                                break;
-                            }
+                        [$min, $max] = $ranges[$metal];
+                        if ($pricePerOunce >= $min && $pricePerOunce <= $max) {
+                            $normalized[$metal] = round($pricePerOunce, 2);
+                            $freshScraped[$metal] = $normalized[$metal];
+                            $hasScraped = true;
+                            $rowsMatched++;
+                            $debugLog[] = "SCRAPE {$metal}: {$rawPrice} {$unit} -> {$normalized[$metal]} oz";
                         } else {
-                            $debugLog[] = "SCRAPE {$metal}: goldprice-json missing record";
+                            $debugLog[] = "SCRAPE {$metal}: rejected {$pricePerOunce}/oz outside range";
                         }
-
-                        continue;
                     }
+                }
 
-                    $html = $response->body();
-                    if (trim($html) === '') {
-                        $debugLog[] = "SCRAPE {$metal}: empty body";
-                        continue;
-                    }
-
-                    $candidates = $extractCandidates($html, $metal);
-                    $anchor = isset($lastGood[$metal]) && is_numeric($lastGood[$metal])
-                        ? (float) $lastGood[$metal]
-                        : (float) $fallback[$metal];
-                    $picked = $selectBest($candidates, $ranges[$metal], $anchor, $maxDeviation[$metal]);
-
-                    if ($picked !== null) {
-                        $acceptedBySource[] = (float) $picked;
-                        $debugLog[] = "SCRAPE {$metal}: candidate {$picked} from " . count($candidates) . " matches (anchor {$anchor})";
-                        continue;
-                    }
-
-                    $debugLog[] = "SCRAPE {$metal}: no valid candidates";
-                } catch (\Throwable $e) {
-                    $debugLog[] = "SCRAPE {$metal}: exception " . substr($e->getMessage(), 0, 220);
+                if ($rowsMatched === 0) {
+                    $debugLog[] = 'SCRAPE dailymetalprice: no matching metal rows parsed';
                 }
             }
-
-            // Require source agreement to avoid selecting noisy HTML numbers.
-            if (count($acceptedBySource) >= 2) {
-                sort($acceptedBySource);
-                $median = $acceptedBySource[(int) floor(count($acceptedBySource) / 2)];
-                $normalized[$metal] = round((float) $median, 2);
-                $freshScraped[$metal] = $normalized[$metal];
-                $hasScraped = true;
-                $debugLog[] = "SCRAPE {$metal}: consensus selected {$normalized[$metal]} from " . count($acceptedBySource) . ' sources';
-            } elseif (count($acceptedBySource) === 1) {
-                // Single-source values are only trusted if very close to anchor.
-                $single = (float) $acceptedBySource[0];
-                $anchor = isset($lastGood[$metal]) && is_numeric($lastGood[$metal])
-                    ? (float) $lastGood[$metal]
-                    : (float) $fallback[$metal];
-                $drift = $anchor > 0 ? abs($single - $anchor) / $anchor : 1;
-                $allowSingleSource = !in_array($metal, ['gold', 'silver'], true);
-                if ($allowSingleSource && $drift <= 0.12) {
-                    $normalized[$metal] = round($single, 2);
-                    $freshScraped[$metal] = $normalized[$metal];
-                    $hasScraped = true;
-                    $debugLog[] = "SCRAPE {$metal}: single-source accepted {$normalized[$metal]} (drift " . round($drift * 100, 2) . '%)';
-                } else {
-                    $debugLog[] = "SCRAPE {$metal}: single-source rejected {$single} (drift " . round($drift * 100, 2) . '%)';
-                }
-            }
+        } catch (\Throwable $e) {
+            $debugLog[] = 'SCRAPE dailymetalprice exception: ' . substr($e->getMessage(), 0, 220);
         }
 
         // Fill gaps from last known good scraped values.
