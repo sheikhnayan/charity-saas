@@ -75,6 +75,14 @@ Route::get('/api/metals/prices', function () {
             'palladium' => [500, 3000],
         ];
 
+        // Maximum allowed drift from anchor price when validating scraped candidates.
+        $maxDeviation = [
+            'gold' => 0.35,
+            'silver' => 0.45,
+            'platinum' => 0.40,
+            'palladium' => 0.55,
+        ];
+
         $fallback = [
             'gold' => 2045.50,
             'silver' => 27.30,
@@ -143,7 +151,7 @@ Route::get('/api/metals/prices', function () {
             return array_values(array_unique($candidates));
         };
 
-        $selectBest = static function (array $candidates, array $range, ?float $anchor): ?float {
+        $selectBest = static function (array $candidates, array $range, float $anchor, float $maxDeviationPercent): ?float {
             [$min, $max] = $range;
             $valid = array_values(array_filter($candidates, static function ($value) use ($min, $max) {
                 return is_numeric($value) && $value >= $min && $value <= $max;
@@ -153,7 +161,22 @@ Route::get('/api/metals/prices', function () {
                 return null;
             }
 
-            $target = $anchor ?? (($min + $max) / 2);
+            $target = $anchor;
+
+            $anchored = array_values(array_filter($valid, static function ($value) use ($target, $maxDeviationPercent) {
+                if ($target <= 0) {
+                    return false;
+                }
+                $drift = abs($value - $target) / $target;
+                return $drift <= $maxDeviationPercent;
+            }));
+
+            // If nothing is close enough to anchor, reject this source as noisy.
+            if (empty($anchored)) {
+                return null;
+            }
+
+            $valid = $anchored;
             usort($valid, static function ($a, $b) use ($target) {
                 return abs($a - $target) <=> abs($b - $target);
             });
@@ -162,6 +185,7 @@ Route::get('/api/metals/prices', function () {
         };
 
         $hasScraped = false;
+        $freshScraped = [];
         $http = \Illuminate\Support\Facades\Http::timeout(10)
             ->retry(2, 300)
             ->withoutVerifying()
@@ -189,19 +213,22 @@ Route::get('/api/metals/prices', function () {
                     }
 
                     $candidates = $extractCandidates($html, $metal);
-                    $anchor = isset($lastGood[$metal]) && is_numeric($lastGood[$metal]) ? (float) $lastGood[$metal] : null;
-                    $picked = $selectBest($candidates, $ranges[$metal], $anchor);
+                    $anchor = isset($lastGood[$metal]) && is_numeric($lastGood[$metal])
+                        ? (float) $lastGood[$metal]
+                        : (float) $fallback[$metal];
+                    $picked = $selectBest($candidates, $ranges[$metal], $anchor, $maxDeviation[$metal]);
 
                     if ($picked !== null) {
                         $normalized[$metal] = $picked;
+                        $freshScraped[$metal] = $picked;
                         $hasScraped = true;
-                        $debugLog[] = "SCRAPE {$metal}: selected {$picked} from " . count($candidates) . ' candidates';
+                        $debugLog[] = "SCRAPE {$metal}: selected {$picked} from " . count($candidates) . " candidates (anchor {$anchor})";
                         break;
                     }
 
                     $debugLog[] = "SCRAPE {$metal}: no valid candidates";
                 } catch (\Throwable $e) {
-                    $debugLog[] = "SCRAPE {$metal}: exception " . $e->getMessage();
+                    $debugLog[] = "SCRAPE {$metal}: exception " . substr($e->getMessage(), 0, 220);
                 }
             }
         }
@@ -238,8 +265,12 @@ Route::get('/api/metals/prices', function () {
         }
 
         // Update last known good only when at least one value was freshly scraped.
-        if ($hasScraped) {
-            \Illuminate\Support\Facades\Cache::put($lastGoodKey, $normalized, now()->addDays(7));
+        if (!empty($freshScraped)) {
+            $nextLastGood = is_array($lastGood) ? $lastGood : [];
+            foreach ($freshScraped as $metal => $price) {
+                $nextLastGood[$metal] = $price;
+            }
+            \Illuminate\Support\Facades\Cache::put($lastGoodKey, $nextLastGood, now()->addDays(7));
             $debugLog[] = 'LAST_GOOD updated';
         }
 
