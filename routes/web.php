@@ -56,8 +56,8 @@ Route::get('/api/teachers', [\App\Http\Controllers\Admin\TeacherController::clas
 
 // Public metals price API (used by scrap calculator component)
 Route::get('/api/metals/prices', function () {
-    $cacheKey = 'metals_scrape_prices_usd';
-    $lastGoodKey = 'metals_scrape_last_good_usd';
+    $cacheKey = 'metals_scrape_prices_usd_v2';
+    $lastGoodKey = 'metals_scrape_last_good_usd_v2';
 
     $payload = \Illuminate\Support\Facades\Cache::remember($cacheKey, 120, function () use ($lastGoodKey) {
         $debugLog = [];
@@ -197,6 +197,9 @@ Route::get('/api/metals/prices', function () {
             ]);
 
         foreach ($sourcesByMetal as $metal => $urls) {
+            $debugLog[] = "SOURCES {$metal}: " . implode(', ', $urls);
+            $acceptedBySource = [];
+
             foreach ($urls as $url) {
                 try {
                     $response = $http->get($url);
@@ -219,16 +222,39 @@ Route::get('/api/metals/prices', function () {
                     $picked = $selectBest($candidates, $ranges[$metal], $anchor, $maxDeviation[$metal]);
 
                     if ($picked !== null) {
-                        $normalized[$metal] = $picked;
-                        $freshScraped[$metal] = $picked;
-                        $hasScraped = true;
-                        $debugLog[] = "SCRAPE {$metal}: selected {$picked} from " . count($candidates) . " candidates (anchor {$anchor})";
-                        break;
+                        $acceptedBySource[] = (float) $picked;
+                        $debugLog[] = "SCRAPE {$metal}: candidate {$picked} from " . count($candidates) . " matches (anchor {$anchor})";
+                        continue;
                     }
 
                     $debugLog[] = "SCRAPE {$metal}: no valid candidates";
                 } catch (\Throwable $e) {
                     $debugLog[] = "SCRAPE {$metal}: exception " . substr($e->getMessage(), 0, 220);
+                }
+            }
+
+            // Require source agreement to avoid selecting noisy HTML numbers.
+            if (count($acceptedBySource) >= 2) {
+                sort($acceptedBySource);
+                $median = $acceptedBySource[(int) floor(count($acceptedBySource) / 2)];
+                $normalized[$metal] = round((float) $median, 2);
+                $freshScraped[$metal] = $normalized[$metal];
+                $hasScraped = true;
+                $debugLog[] = "SCRAPE {$metal}: consensus selected {$normalized[$metal]} from " . count($acceptedBySource) . ' sources';
+            } elseif (count($acceptedBySource) === 1) {
+                // Single-source values are only trusted if very close to anchor.
+                $single = (float) $acceptedBySource[0];
+                $anchor = isset($lastGood[$metal]) && is_numeric($lastGood[$metal])
+                    ? (float) $lastGood[$metal]
+                    : (float) $fallback[$metal];
+                $drift = $anchor > 0 ? abs($single - $anchor) / $anchor : 1;
+                if ($drift <= 0.12) {
+                    $normalized[$metal] = round($single, 2);
+                    $freshScraped[$metal] = $normalized[$metal];
+                    $hasScraped = true;
+                    $debugLog[] = "SCRAPE {$metal}: single-source accepted {$normalized[$metal]} (drift " . round($drift * 100, 2) . '%)';
+                } else {
+                    $debugLog[] = "SCRAPE {$metal}: single-source rejected {$single} (drift " . round($drift * 100, 2) . '%)';
                 }
             }
         }
