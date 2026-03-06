@@ -8405,8 +8405,8 @@ break;
                 refreshSeconds: 60
             };
 
-            // Normalize saved deduction payload in case it comes back as a JSON string.
-            let parsedDeductions = scrapData.metalDeductions;
+            // Normalize saved deduction payload in case it comes back in different shapes.
+            let parsedDeductions = scrapData.metalDeductions ?? scrapData.metal_deductions ?? scrapData.deductions;
             if (typeof parsedDeductions === 'string') {
                 try {
                     parsedDeductions = JSON.parse(parsedDeductions);
@@ -8418,10 +8418,10 @@ break;
                 parsedDeductions = {};
             }
             scrapData.metalDeductions = {
-                gold: Number.isFinite(parseFloat(parsedDeductions.gold)) ? parseFloat(parsedDeductions.gold) : 0,
-                silver: Number.isFinite(parseFloat(parsedDeductions.silver)) ? parseFloat(parsedDeductions.silver) : 0,
-                platinum: Number.isFinite(parseFloat(parsedDeductions.platinum)) ? parseFloat(parsedDeductions.platinum) : 0,
-                palladium: Number.isFinite(parseFloat(parsedDeductions.palladium)) ? parseFloat(parsedDeductions.palladium) : 0,
+                gold: Number.isFinite(parseFloat(parsedDeductions.gold ?? parsedDeductions.goldDeduction ?? parsedDeductions.deductionGold)) ? parseFloat(parsedDeductions.gold ?? parsedDeductions.goldDeduction ?? parsedDeductions.deductionGold) : 0,
+                silver: Number.isFinite(parseFloat(parsedDeductions.silver ?? parsedDeductions.silverDeduction ?? parsedDeductions.deductionSilver)) ? parseFloat(parsedDeductions.silver ?? parsedDeductions.silverDeduction ?? parsedDeductions.deductionSilver) : 0,
+                platinum: Number.isFinite(parseFloat(parsedDeductions.platinum ?? parsedDeductions.platinumDeduction ?? parsedDeductions.deductionPlatinum)) ? parseFloat(parsedDeductions.platinum ?? parsedDeductions.platinumDeduction ?? parsedDeductions.deductionPlatinum) : 0,
+                palladium: Number.isFinite(parseFloat(parsedDeductions.palladium ?? parsedDeductions.palladiumDeduction ?? parsedDeductions.deductionPalladium)) ? parseFloat(parsedDeductions.palladium ?? parsedDeductions.palladiumDeduction ?? parsedDeductions.deductionPalladium) : 0,
             };
 
             const showMetal = (metal) => Array.isArray(scrapData.visibleMetals) && scrapData.visibleMetals.includes(metal);
@@ -17446,6 +17446,26 @@ function applyResponsiveStyles() {
                     showLivePrices: true,
                     refreshSeconds: 60
                 }, data.scrapCalculatorData || {});
+
+                // Normalize deduction payload from multiple legacy formats.
+                let loadedDeductionsA = actualContent._scrapCalculatorData.metalDeductions
+                    ?? actualContent._scrapCalculatorData.metal_deductions
+                    ?? actualContent._scrapCalculatorData.deductions
+                    ?? data.properties?.metalDeductions
+                    ?? data.properties?.metal_deductions;
+                if (typeof loadedDeductionsA === 'string') {
+                    try { loadedDeductionsA = JSON.parse(loadedDeductionsA); } catch (e) { loadedDeductionsA = {}; }
+                }
+                if (!loadedDeductionsA || typeof loadedDeductionsA !== 'object') {
+                    loadedDeductionsA = {};
+                }
+                actualContent._scrapCalculatorData.metalDeductions = {
+                    gold: Number.isFinite(parseFloat(loadedDeductionsA.gold ?? loadedDeductionsA.goldDeduction ?? loadedDeductionsA.deductionGold)) ? parseFloat(loadedDeductionsA.gold ?? loadedDeductionsA.goldDeduction ?? loadedDeductionsA.deductionGold) : 0,
+                    silver: Number.isFinite(parseFloat(loadedDeductionsA.silver ?? loadedDeductionsA.silverDeduction ?? loadedDeductionsA.deductionSilver)) ? parseFloat(loadedDeductionsA.silver ?? loadedDeductionsA.silverDeduction ?? loadedDeductionsA.deductionSilver) : 0,
+                    platinum: Number.isFinite(parseFloat(loadedDeductionsA.platinum ?? loadedDeductionsA.platinumDeduction ?? loadedDeductionsA.deductionPlatinum)) ? parseFloat(loadedDeductionsA.platinum ?? loadedDeductionsA.platinumDeduction ?? loadedDeductionsA.deductionPlatinum) : 0,
+                    palladium: Number.isFinite(parseFloat(loadedDeductionsA.palladium ?? loadedDeductionsA.palladiumDeduction ?? loadedDeductionsA.deductionPalladium)) ? parseFloat(loadedDeductionsA.palladium ?? loadedDeductionsA.palladiumDeduction ?? loadedDeductionsA.deductionPalladium) : 0,
+                };
+
                 if (actualContent.renderScrapCalculatorPreview) {
                     actualContent.renderScrapCalculatorPreview();
                 }
@@ -18062,6 +18082,26 @@ function applyResponsiveStyles() {
                 showLivePrices: true,
                 refreshSeconds: 60
             }, data.scrapCalculatorData || {});
+
+            // Normalize deduction payload from multiple legacy formats.
+            let loadedDeductionsB = content._scrapCalculatorData.metalDeductions
+                ?? content._scrapCalculatorData.metal_deductions
+                ?? content._scrapCalculatorData.deductions
+                ?? data.properties?.metalDeductions
+                ?? data.properties?.metal_deductions;
+            if (typeof loadedDeductionsB === 'string') {
+                try { loadedDeductionsB = JSON.parse(loadedDeductionsB); } catch (e) { loadedDeductionsB = {}; }
+            }
+            if (!loadedDeductionsB || typeof loadedDeductionsB !== 'object') {
+                loadedDeductionsB = {};
+            }
+            content._scrapCalculatorData.metalDeductions = {
+                gold: Number.isFinite(parseFloat(loadedDeductionsB.gold ?? loadedDeductionsB.goldDeduction ?? loadedDeductionsB.deductionGold)) ? parseFloat(loadedDeductionsB.gold ?? loadedDeductionsB.goldDeduction ?? loadedDeductionsB.deductionGold) : 0,
+                silver: Number.isFinite(parseFloat(loadedDeductionsB.silver ?? loadedDeductionsB.silverDeduction ?? loadedDeductionsB.deductionSilver)) ? parseFloat(loadedDeductionsB.silver ?? loadedDeductionsB.silverDeduction ?? loadedDeductionsB.deductionSilver) : 0,
+                platinum: Number.isFinite(parseFloat(loadedDeductionsB.platinum ?? loadedDeductionsB.platinumDeduction ?? loadedDeductionsB.deductionPlatinum)) ? parseFloat(loadedDeductionsB.platinum ?? loadedDeductionsB.platinumDeduction ?? loadedDeductionsB.deductionPlatinum) : 0,
+                palladium: Number.isFinite(parseFloat(loadedDeductionsB.palladium ?? loadedDeductionsB.palladiumDeduction ?? loadedDeductionsB.deductionPalladium)) ? parseFloat(loadedDeductionsB.palladium ?? loadedDeductionsB.palladiumDeduction ?? loadedDeductionsB.deductionPalladium) : 0,
+            };
+
             if (content.renderScrapCalculatorPreview) {
                 content.renderScrapCalculatorPreview();
             }
