@@ -8392,7 +8392,13 @@ break;
         break;
 
             case 'scrap-metal-calculator':
-            const scrapData = content._scrapCalculatorData || {
+            const scrapHost = content._scrapCalculatorData
+                ? content
+                : (selectedComponent && selectedComponent._scrapCalculatorData)
+                    ? selectedComponent
+                    : (selectedComponent ? selectedComponent.querySelector('.scrap-metal-calculator-component') : null);
+
+            const scrapData = (scrapHost && scrapHost._scrapCalculatorData) || {
                 title: 'Scrap Metal Calculator',
                 subtitle: 'Estimate your payout using live market prices.',
                 visibleMetals: ['gold', 'silver', 'platinum', 'palladium'],
@@ -20007,8 +20013,15 @@ function applyResponsiveStyles() {
         const content = getContentElement(selectedComponent);
         if (!content) return;
 
-        if (!content._scrapCalculatorData) {
-            content._scrapCalculatorData = {
+        const fallbackContent = selectedComponent.querySelector('.scrap-metal-calculator-component');
+        const target = content._scrapCalculatorData
+            ? content
+            : (fallbackContent && fallbackContent._scrapCalculatorData)
+                ? fallbackContent
+                : content;
+
+        if (!target._scrapCalculatorData) {
+            target._scrapCalculatorData = {
                 title: 'Scrap Metal Calculator',
                 subtitle: 'Estimate your payout using live market prices.',
                 visibleMetals: ['gold', 'silver', 'platinum', 'palladium'],
@@ -20022,23 +20035,28 @@ function applyResponsiveStyles() {
             };
         }
 
-        if (typeof content._scrapCalculatorData.metalDeductions === 'string') {
+        if (typeof target._scrapCalculatorData.metalDeductions === 'string') {
             try {
-                content._scrapCalculatorData.metalDeductions = JSON.parse(content._scrapCalculatorData.metalDeductions);
+                target._scrapCalculatorData.metalDeductions = JSON.parse(target._scrapCalculatorData.metalDeductions);
             } catch (e) {
-                content._scrapCalculatorData.metalDeductions = { gold: 0, silver: 0, platinum: 0, palladium: 0 };
+                target._scrapCalculatorData.metalDeductions = { gold: 0, silver: 0, platinum: 0, palladium: 0 };
             }
         }
 
-        content._scrapCalculatorData[field] = value;
+        target._scrapCalculatorData[field] = value;
 
-        if (field === 'defaultMetal' && !content._scrapCalculatorData.visibleMetals.includes(value)) {
-            content._scrapCalculatorData.visibleMetals.push(value);
+        if (field === 'defaultMetal' && !target._scrapCalculatorData.visibleMetals.includes(value)) {
+            target._scrapCalculatorData.visibleMetals.push(value);
         }
 
-        if (content.renderScrapCalculatorPreview) {
-            content.renderScrapCalculatorPreview();
+        if (target.renderScrapCalculatorPreview) {
+            target.renderScrapCalculatorPreview();
         }
+
+        // Keep wrapper and content references in sync.
+        content._scrapCalculatorData = target._scrapCalculatorData;
+        if (fallbackContent) fallbackContent._scrapCalculatorData = target._scrapCalculatorData;
+        selectedComponent._scrapCalculatorData = target._scrapCalculatorData;
 
         updatePropertyPanel();
     }
@@ -20083,29 +20101,41 @@ function applyResponsiveStyles() {
         const content = getContentElement(selectedComponent);
         if (!content) return;
 
-        if (!content._scrapCalculatorData) {
+        const fallbackContent = selectedComponent.querySelector('.scrap-metal-calculator-component');
+        const target = content._scrapCalculatorData
+            ? content
+            : (fallbackContent && fallbackContent._scrapCalculatorData)
+                ? fallbackContent
+                : content;
+
+        if (!target._scrapCalculatorData) {
             return;
         }
 
-        if (typeof content._scrapCalculatorData.metalDeductions === 'string') {
+        if (typeof target._scrapCalculatorData.metalDeductions === 'string') {
             try {
-                content._scrapCalculatorData.metalDeductions = JSON.parse(content._scrapCalculatorData.metalDeductions);
+                target._scrapCalculatorData.metalDeductions = JSON.parse(target._scrapCalculatorData.metalDeductions);
             } catch (e) {
-                content._scrapCalculatorData.metalDeductions = { gold: 0, silver: 0, platinum: 0, palladium: 0 };
+                target._scrapCalculatorData.metalDeductions = { gold: 0, silver: 0, platinum: 0, palladium: 0 };
             }
         }
 
-        if (!content._scrapCalculatorData.metalDeductions || typeof content._scrapCalculatorData.metalDeductions !== 'object') {
-            content._scrapCalculatorData.metalDeductions = { gold: 0, silver: 0, platinum: 0, palladium: 0 };
+        if (!target._scrapCalculatorData.metalDeductions || typeof target._scrapCalculatorData.metalDeductions !== 'object') {
+            target._scrapCalculatorData.metalDeductions = { gold: 0, silver: 0, platinum: 0, palladium: 0 };
         }
 
         const raw = parseFloat(value);
         const clamped = Number.isFinite(raw) ? Math.min(100, Math.max(0, raw)) : 0;
-        content._scrapCalculatorData.metalDeductions[metal] = clamped;
+        target._scrapCalculatorData.metalDeductions[metal] = clamped;
 
-        if (content.renderScrapCalculatorPreview) {
-            content.renderScrapCalculatorPreview();
+        if (target.renderScrapCalculatorPreview) {
+            target.renderScrapCalculatorPreview();
         }
+
+        // Keep wrapper and content references in sync.
+        content._scrapCalculatorData = target._scrapCalculatorData;
+        if (fallbackContent) fallbackContent._scrapCalculatorData = target._scrapCalculatorData;
+        selectedComponent._scrapCalculatorData = target._scrapCalculatorData;
 
         updatePropertyPanel();
     }
