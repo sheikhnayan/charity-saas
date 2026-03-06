@@ -153,6 +153,8 @@ Route::get('/api/metals/prices', function () {
                             'apikey' => 'demo'  // Free demo key (limited but works)
                         ]);
                     
+                    $debugLog[] = "  Twelve Data {$metal} Status: " . $response->status();
+                    
                     if ($response->ok()) {
                         $data = $response->json();
                         $price = $data['price'] ?? null;
@@ -169,6 +171,44 @@ Route::get('/api/metals/prices', function () {
                 }
             } catch (\Throwable $e) {
                 $debugLog[] = '⚠️  Twelve Data Exception: ' . $e->getMessage();
+            }
+        }
+        
+        // Quaternary source: Metals.live spot prices (as backup if others fail)
+        if (in_array(null, $normalized, true)) {
+            $debugLog[] = '🔄 Quaternary: Metals.live spot prices API';
+            try {
+                $response = \Illuminate\Support\Facades\Http::timeout(10)
+                    ->withoutVerifying()
+                    ->acceptJson()
+                    ->get('https://api.metals.live/v1/spot/price', [
+                        'codes' => 'XAU,XAG,XPT,XPD'
+                    ]);
+                
+                $debugLog[] = '  Metals.live Status: ' . $response->status();
+                
+                if ($response->ok()) {
+                    $data = $response->json();
+                    $debugLog[] = '✓ Metals.live returned data';
+                    
+                    $metalMap = ['XAU' => 'gold', 'XAG' => 'silver', 'XPT' => 'platinum', 'XPD' => 'palladium'];
+                    foreach ($metalMap as $code => $metal) {
+                        if ($normalized[$metal] !== null) continue;
+                        
+                        $price = $data[$code] ?? null;
+                        list($min, $max) = $priceRanges[$metal];
+                        
+                        if ($price && is_numeric($price) && $price >= $min && $price <= $max) {
+                            $normalized[$metal] = round($price, 2);
+                            $gotRealData = true;
+                            $debugLog[] = "  ✓ {$metal}: \${$normalized[$metal]}/oz (Metals.live)";
+                        }
+                    }
+                } else {
+                    $debugLog[] = '❌ Metals.live Status: ' . $response->status();
+                }
+            } catch (\Throwable $e) {
+                $debugLog[] = '❌ Metals.live Exception: ' . $e->getMessage();
             }
         }
         
