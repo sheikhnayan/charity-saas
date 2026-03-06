@@ -8405,6 +8405,25 @@ break;
                 refreshSeconds: 60
             };
 
+            // Normalize saved deduction payload in case it comes back as a JSON string.
+            let parsedDeductions = scrapData.metalDeductions;
+            if (typeof parsedDeductions === 'string') {
+                try {
+                    parsedDeductions = JSON.parse(parsedDeductions);
+                } catch (e) {
+                    parsedDeductions = {};
+                }
+            }
+            if (!parsedDeductions || typeof parsedDeductions !== 'object') {
+                parsedDeductions = {};
+            }
+            scrapData.metalDeductions = {
+                gold: Number.isFinite(parseFloat(parsedDeductions.gold)) ? parseFloat(parsedDeductions.gold) : 0,
+                silver: Number.isFinite(parseFloat(parsedDeductions.silver)) ? parseFloat(parsedDeductions.silver) : 0,
+                platinum: Number.isFinite(parseFloat(parsedDeductions.platinum)) ? parseFloat(parsedDeductions.platinum) : 0,
+                palladium: Number.isFinite(parseFloat(parsedDeductions.palladium)) ? parseFloat(parsedDeductions.palladium) : 0,
+            };
+
             const showMetal = (metal) => Array.isArray(scrapData.visibleMetals) && scrapData.visibleMetals.includes(metal);
             specificControls = `
                 <div class="form-group">
@@ -19963,6 +19982,14 @@ function applyResponsiveStyles() {
             };
         }
 
+        if (typeof content._scrapCalculatorData.metalDeductions === 'string') {
+            try {
+                content._scrapCalculatorData.metalDeductions = JSON.parse(content._scrapCalculatorData.metalDeductions);
+            } catch (e) {
+                content._scrapCalculatorData.metalDeductions = { gold: 0, silver: 0, platinum: 0, palladium: 0 };
+            }
+        }
+
         content._scrapCalculatorData[field] = value;
 
         if (field === 'defaultMetal' && !content._scrapCalculatorData.visibleMetals.includes(value)) {
@@ -20018,6 +20045,14 @@ function applyResponsiveStyles() {
 
         if (!content._scrapCalculatorData) {
             return;
+        }
+
+        if (typeof content._scrapCalculatorData.metalDeductions === 'string') {
+            try {
+                content._scrapCalculatorData.metalDeductions = JSON.parse(content._scrapCalculatorData.metalDeductions);
+            } catch (e) {
+                content._scrapCalculatorData.metalDeductions = { gold: 0, silver: 0, platinum: 0, palladium: 0 };
+            }
         }
 
         if (!content._scrapCalculatorData.metalDeductions || typeof content._scrapCalculatorData.metalDeductions !== 'object') {

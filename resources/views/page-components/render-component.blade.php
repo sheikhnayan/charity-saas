@@ -9670,6 +9670,17 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                         return Object.prototype.hasOwnProperty.call(map, key) ? map[key] : 0.75;
                     }
 
+                    function getPurityPercentLabel(karatValue) {
+                        const key = String(karatValue || '18');
+                        const labels = {
+                            '24': '100',
+                            '22': '91.6',
+                            '21': '87.5',
+                            '18': '75.0',
+                        };
+                        return Object.prototype.hasOwnProperty.call(labels, key) ? labels[key] : '75.0';
+                    }
+
                     function renderCards() {
                         if (!showCards || !elCards) return;
 
@@ -9696,7 +9707,7 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                         }
 
                         if (elBreakdown) {
-                            const purityPct = Math.round(purityRatio * 100);
+                            const purityPct = getPurityPercentLabel(purityCode);
                             const suffix = unit === 'ounces' ? '/oz' : '/g';
                             const safeRate = rate || 0;
                             elBreakdown.textContent = `${weight} ${unit} x ${formatMoney(safeRate)}${suffix} x ${purityPct}% = ${formatMoney(estimated)}`;
