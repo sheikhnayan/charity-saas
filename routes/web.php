@@ -86,8 +86,8 @@ Route::get('/api/metals/prices', function () {
             $response = \Illuminate\Support\Facades\Http::timeout(10)
                 ->acceptJson()
                 ->get('https://api.frankfurter.dev/latest', [
-                    'from' => 'USD',
-                    'to' => 'XAU,XAG,XPT,XPD'
+                    'base' => 'USD',
+                    'symbols' => 'XAU,XAG,XPT,XPD'
                 ]);
 
             $debugLog[] = '📥 Frankfurter Response Status: ' . $response->status();
