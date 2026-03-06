@@ -56,8 +56,8 @@ Route::get('/api/teachers', [\App\Http\Controllers\Admin\TeacherController::clas
 
 // Public metals price API (used by scrap calculator component)
 Route::get('/api/metals/prices', function () {
-    $cacheKey = 'metals_scrape_prices_usd_v2';
-    $lastGoodKey = 'metals_scrape_last_good_usd_v2';
+    $cacheKey = 'metals_scrape_prices_usd_v3';
+    $lastGoodKey = 'metals_scrape_last_good_usd_v3';
 
     $payload = \Illuminate\Support\Facades\Cache::remember($cacheKey, 120, function () use ($lastGoodKey) {
         $debugLog = [];
@@ -96,16 +96,12 @@ Route::get('/api/metals/prices', function () {
             'gold' => [
                 'https://goldprice.org/',
                 'https://goldprice.org/gold-price.html',
-                'https://www.metal.com/Gold',
-                'https://www.bullionbypost.co.uk/gold-price/',
-                'https://www.kitco.com/charts/livegold.html',
+                'https://data-asg.goldprice.org/dbXRates/USD',
             ],
             'silver' => [
                 'https://goldprice.org/',
                 'https://goldprice.org/silver-price.html',
-                'https://www.metal.com/Silver',
-                'https://www.bullionbypost.co.uk/silver-price/',
-                'https://www.kitco.com/charts/livesilver.html',
+                'https://data-asg.goldprice.org/dbXRates/USD',
             ],
             'platinum' => [
                 'https://www.metal.com/Platinum',
@@ -214,6 +210,9 @@ Route::get('/api/metals/prices', function () {
                     $debugLog[] = "SCRAPE {$metal}: {$url} -> HTTP {$response->status()}";
 
                     if (!$response->ok()) {
+                        if ($response->status() === 403 && strpos($url, 'goldprice.org') !== false) {
+                            $debugLog[] = "SCRAPE {$metal}: goldprice blocked by remote firewall";
+                        }
                         continue;
                     }
 
@@ -256,7 +255,8 @@ Route::get('/api/metals/prices', function () {
                     ? (float) $lastGood[$metal]
                     : (float) $fallback[$metal];
                 $drift = $anchor > 0 ? abs($single - $anchor) / $anchor : 1;
-                if ($drift <= 0.12) {
+                $allowSingleSource = !in_array($metal, ['gold', 'silver'], true);
+                if ($allowSingleSource && $drift <= 0.12) {
                     $normalized[$metal] = round($single, 2);
                     $freshScraped[$metal] = $normalized[$metal];
                     $hasScraped = true;
