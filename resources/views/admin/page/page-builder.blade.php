@@ -4336,6 +4336,7 @@ button a:hover {
                 weightUnit: 'grams',
                 defaultWeight: '10',
                 defaultPurity: '75',
+                metalDeductions: { gold: 0, silver: 0, platinum: 0, palladium: 0 },
                 showLivePrices: true,
                 refreshSeconds: 60
             };
@@ -8399,6 +8400,7 @@ break;
                 weightUnit: 'grams',
                 defaultWeight: '10',
                 defaultPurity: '75',
+                metalDeductions: { gold: 0, silver: 0, platinum: 0, palladium: 0 },
                 showLivePrices: true,
                 refreshSeconds: 60
             };
@@ -8432,6 +8434,29 @@ break;
                         <option value="platinum" ${scrapData.defaultMetal === 'platinum' ? 'selected' : ''}>Platinum</option>
                         <option value="palladium" ${scrapData.defaultMetal === 'palladium' ? 'selected' : ''}>Palladium</option>
                     </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Price Deductions By Metal (%)</label>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+                        <div>
+                            <label style="font-size:12px;color:#666;">Gold</label>
+                            <input type="number" min="0" max="100" step="0.1" value="${(scrapData.metalDeductions && scrapData.metalDeductions.gold != null) ? scrapData.metalDeductions.gold : 0}" onchange="updateScrapCalculatorDeduction('gold', this.value)">
+                        </div>
+                        <div>
+                            <label style="font-size:12px;color:#666;">Silver</label>
+                            <input type="number" min="0" max="100" step="0.1" value="${(scrapData.metalDeductions && scrapData.metalDeductions.silver != null) ? scrapData.metalDeductions.silver : 0}" onchange="updateScrapCalculatorDeduction('silver', this.value)">
+                        </div>
+                        <div>
+                            <label style="font-size:12px;color:#666;">Platinum</label>
+                            <input type="number" min="0" max="100" step="0.1" value="${(scrapData.metalDeductions && scrapData.metalDeductions.platinum != null) ? scrapData.metalDeductions.platinum : 0}" onchange="updateScrapCalculatorDeduction('platinum', this.value)">
+                        </div>
+                        <div>
+                            <label style="font-size:12px;color:#666;">Palladium</label>
+                            <input type="number" min="0" max="100" step="0.1" value="${(scrapData.metalDeductions && scrapData.metalDeductions.palladium != null) ? scrapData.metalDeductions.palladium : 0}" onchange="updateScrapCalculatorDeduction('palladium', this.value)">
+                        </div>
+                    </div>
+                    <small style="display:block;margin-top:4px;color:#666;">Final rate = live metal price minus this percentage</small>
                 </div>
 
                 <div class="form-group">
@@ -17400,6 +17425,7 @@ function applyResponsiveStyles() {
                     weightUnit: 'grams',
                     defaultWeight: '10',
                     defaultPurity: '75',
+                    metalDeductions: { gold: 0, silver: 0, platinum: 0, palladium: 0 },
                     showLivePrices: true,
                     refreshSeconds: 60
                 }, data.scrapCalculatorData || {});
@@ -18015,6 +18041,7 @@ function applyResponsiveStyles() {
                 weightUnit: 'grams',
                 defaultWeight: '10',
                 defaultPurity: '75',
+                metalDeductions: { gold: 0, silver: 0, platinum: 0, palladium: 0 },
                 showLivePrices: true,
                 refreshSeconds: 60
             }, data.scrapCalculatorData || {});
@@ -19932,6 +19959,7 @@ function applyResponsiveStyles() {
                 weightUnit: 'grams',
                 defaultWeight: '10',
                 defaultPurity: '75',
+                metalDeductions: { gold: 0, silver: 0, platinum: 0, palladium: 0 },
                 showLivePrices: true,
                 refreshSeconds: 60
             };
@@ -19977,6 +20005,30 @@ function applyResponsiveStyles() {
         if (!content._scrapCalculatorData.visibleMetals.includes(content._scrapCalculatorData.defaultMetal)) {
             content._scrapCalculatorData.defaultMetal = content._scrapCalculatorData.visibleMetals[0];
         }
+
+        if (content.renderScrapCalculatorPreview) {
+            content.renderScrapCalculatorPreview();
+        }
+
+        updatePropertyPanel();
+    }
+
+    function updateScrapCalculatorDeduction(metal, value) {
+        if (!selectedComponent) return;
+        const content = getContentElement(selectedComponent);
+        if (!content) return;
+
+        if (!content._scrapCalculatorData) {
+            return;
+        }
+
+        if (!content._scrapCalculatorData.metalDeductions || typeof content._scrapCalculatorData.metalDeductions !== 'object') {
+            content._scrapCalculatorData.metalDeductions = { gold: 0, silver: 0, platinum: 0, palladium: 0 };
+        }
+
+        const raw = parseFloat(value);
+        const clamped = Number.isFinite(raw) ? Math.min(100, Math.max(0, raw)) : 0;
+        content._scrapCalculatorData.metalDeductions[metal] = clamped;
 
         if (content.renderScrapCalculatorPreview) {
             content.renderScrapCalculatorPreview();

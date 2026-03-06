@@ -9419,6 +9419,17 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                 if ($refreshSeconds > 600) {
                     $refreshSeconds = 600;
                 }
+
+                $metalDeductions = $scrap['metalDeductions'] ?? [];
+                if (!is_array($metalDeductions)) {
+                    $metalDeductions = [];
+                }
+                $metalDeductions = [
+                    'gold' => max(0, min(100, (float) ($metalDeductions['gold'] ?? 0))),
+                    'silver' => max(0, min(100, (float) ($metalDeductions['silver'] ?? 0))),
+                    'platinum' => max(0, min(100, (float) ($metalDeductions['platinum'] ?? 0))),
+                    'palladium' => max(0, min(100, (float) ($metalDeductions['palladium'] ?? 0))),
+                ];
             @endphp
 
             <div class="scrap-calc-shell" id="{{ $componentId }}-scrap" style="{{ $styleStr }}">
@@ -9609,6 +9620,7 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                 (function() {
                     const allowedMetals = @json($visibleMetals);
                     const defaultMetal = @json($defaultMetal);
+                    const metalDeductions = @json($metalDeductions);
                     const refreshMs = {{ $refreshSeconds }} * 1000;
                     const showCards = {{ $showLivePrices ? 'true' : 'false' }};
 
@@ -9631,12 +9643,27 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                         return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value || 0);
                     }
 
+                    function getDeductionPercent(metal) {
+                        const raw = metalDeductions && Object.prototype.hasOwnProperty.call(metalDeductions, metal)
+                            ? parseFloat(metalDeductions[metal])
+                            : 0;
+                        if (!Number.isFinite(raw)) return 0;
+                        return Math.max(0, Math.min(100, raw));
+                    }
+
+                    function getAdjustedRate(rawRate, metal) {
+                        const base = parseFloat(rawRate);
+                        if (!Number.isFinite(base) || base <= 0) return 0;
+                        const pct = getDeductionPercent(metal) / 100;
+                        return base * (1 - pct);
+                    }
+
                     function renderCards() {
                         if (!showCards || !elCards) return;
 
                         elCards.innerHTML = allowedMetals.map((metal) => {
-                            const perGram = prices.gram[metal];
-                            const value = perGram ? formatMoney(perGram) + '/g' : 'N/A';
+                            const perGram = getAdjustedRate(prices.gram[metal], metal);
+                            const value = perGram ? `${formatMoney(perGram)}/g` : 'N/A';
                             return `<div class="price-card"><div class="metal">${metal}</div><div class="value">${value}</div></div>`;
                         }).join('');
                     }
@@ -9648,7 +9675,9 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                         const karats = parseFloat(elPurity ? elPurity.value : 18) || 18;
                         const purityRatio = Math.max(0, Math.min(24, karats)) / 24;
 
-                        const rate = unit === 'ounces' ? prices.ounce[metal] : prices.gram[metal];
+                        const rawRate = unit === 'ounces' ? prices.ounce[metal] : prices.gram[metal];
+                        const rate = getAdjustedRate(rawRate, metal);
+                        const deductionPercent = getDeductionPercent(metal);
                         const estimated = (rate || 0) * weight * purityRatio;
 
                         if (elResult) {
@@ -9659,13 +9688,13 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                             const purityPct = Math.round(purityRatio * 100);
                             const suffix = unit === 'ounces' ? '/oz' : '/g';
                             const safeRate = rate || 0;
-                            elBreakdown.textContent = `${weight} ${unit} x ${formatMoney(safeRate)}${suffix} x ${purityPct}% = ${formatMoney(estimated)}`;
+                            elBreakdown.textContent = `${weight} ${unit} x ${formatMoney(safeRate)}${suffix} (after ${deductionPercent}% deduction) x ${purityPct}% = ${formatMoney(estimated)}`;
                         }
 
                         if (elRate) {
                             const suffix = unit === 'ounces' ? '/oz' : '/g';
                             elRate.textContent = rate
-                                ? `Live ${metal} rate: ${formatMoney(rate)}${suffix}`
+                                ? `Live ${metal} rate after ${deductionPercent}% deduction: ${formatMoney(rate)}${suffix}`
                                 : `Live ${metal} rate unavailable`;
                         }
                     }
