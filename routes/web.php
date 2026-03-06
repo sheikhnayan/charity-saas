@@ -135,54 +135,8 @@ Route::get('/api/metals/prices', function () {
             \Log::warning('Metals primary (Frankfurter) failed', ['error' => $e->getMessage()]);
         }
 
-        // Tertiary source: Twelve Data free API (powerful alternative)
-        if (in_array(null, $normalized, true)) {
-            $debugLog[] = '🔄 Tertiary: Twelve Data commodity API';
-            try {
-                // Twelve Data provides real commodity prices without key on limited free tier
-                $commodities = ['XAU' => 'gold', 'XAG' => 'silver', 'XPT' => 'platinum', 'XPD' => 'palladium'];
-                
-                foreach ($commodities as $code => $metal) {
-                    if ($normalized[$metal] !== null) continue;
-                    
-                    $response = \Illuminate\Support\Facades\Http::timeout(8)
-                        ->withoutVerifying()
-                        ->acceptJson()
-                        ->get('https://api.twelvedata.com/price', [
-                            'symbol' => $code . '/USD',
-                            'apikey' => 'demo'  // Free demo key (limited but works)
-                        ]);
-                    
-                    $debugLog[] = "  Twelve Data {$metal} Status: " . $response->status();
-                    
-                    if ($response->ok()) {
-                        $data = $response->json();
-                        $debugLog[] = "    Response: " . json_encode($data);
-                        
-                        // Try multiple possible field names
-                        $price = $data['price'] ?? $data['close'] ?? $data['last'] ?? null;
-                        
-                        if ($price && is_numeric($price)) {
-                            $price = (float) $price;
-                            list($min, $max) = $priceRanges[$metal];
-                            if ($price >= $min && $price <= $max) {
-                                $normalized[$metal] = round($price, 2);
-                                $gotRealData = true;
-                                $debugLog[] = "  ✓ {$metal}: \${$normalized[$metal]}/oz (Twelve Data)";
-                            } else {
-                                $debugLog[] = "  ✗ {$metal}: \${$price}/oz outside range [\${$min}-\${$max}]";
-                            }
-                        } else {
-                            $debugLog[] = "  ✗ {$metal}: No price field found in response";
-                        }
-                    } else {
-                        $debugLog[] = "  ✗ {$metal}: HTTP " . $response->status();
-                    }
-                }
-            } catch (\Throwable $e) {
-                $debugLog[] = '⚠️  Twelve Data Exception: ' . $e->getMessage();
-            }
-        }
+        // Tertiary source: Skip Twelve Data (requires registered API key, demo key returns 401)
+        // Instead try directly scraping metals.live which we know is accessible
         
         // Quaternary source: Web Scraping from XE.com (as backup if others fail)
         if (in_array(null, $normalized, true)) {
@@ -196,18 +150,18 @@ Route::get('/api/metals/prices', function () {
                     $html = $response->body();
                     $debugLog[] = '✓ XE.com accessible (size: ' . strlen($html) . ' bytes)';
                     
-                    // Try multiple patterns to extract gold price
+                    // Try multiple patterns to extract gold price (using # delimiter)
                     $patterns = [
-                        '/XAU\s+USD[^>]*>([0-9,]+\.[0-9]{2})</i',
-                        '/([0-9,]+\.[0-9]{2})[^<]*XAU\s+USD/i',
-                        '/data-value=["\']([0-9.]+)["\'][^>]*XAU/i',
+                        '#XAU\s+USD[^>]*?>([0-9,]+\.[0-9]{2})#i',
+                        '#([0-9,]+\.[0-9]{2})[^<]*?XAU\s+USD#i',
+                        '#data-value=["\']?([0-9.]+)["\']?[^>]*XAU#i',
                     ];
                     
                     $price = null;
                     foreach ($patterns as $pattern) {
                         if (preg_match($pattern, $html, $matches)) {
                             $price = (float) str_replace(',', '', $matches[1]);
-                            $debugLog[] = "    Found gold price with pattern: \${$price}";
+                            $debugLog[] = "    ✓ Found gold price: \${$price}";
                             break;
                         }
                     }
@@ -217,9 +171,9 @@ Route::get('/api/metals/prices', function () {
                         if ($price >= $min && $price <= $max) {
                             $normalized['gold'] = round($price, 2);
                             $gotRealData = true;
-                            $debugLog[] = "  ✓ gold: \${$normalized['gold']}/oz (scraped from XE.com)";
+                            $debugLog[] = "  ✓ gold: \${$normalized['gold']}/oz (XE.com)";
                         } else {
-                            $debugLog[] = "  ✗ gold: \${$price}/oz outside range [\${$min}-\${$max}]";
+                            $debugLog[] = "  ⚠️  gold: \${$price}/oz outside range [\${$min}-\${$max}]";
                         }
                     } else {
                         $debugLog[] = "  ✗ No gold price pattern matched on XE.com";
@@ -232,9 +186,9 @@ Route::get('/api/metals/prices', function () {
             }
         }
         
-        // Quintary source: Scrape metals.live homepage for embedded price data
+        // Tertiary source: Scrape metals.live homepage for embedded price data
         if (in_array(null, $normalized, true)) {
-            $debugLog[] = '🔄 Quintary: Scraping metals.live homepage';
+            $debugLog[] = '🔄 Tertiary: Scraping metals.live homepage';
             try {
                 $response = \Illuminate\Support\Facades\Http::timeout(10)
                     ->withoutVerifying()
@@ -242,26 +196,26 @@ Route::get('/api/metals/prices', function () {
                 
                 if ($response->ok()) {
                     $html = $response->body();
-                    $debugLog[] = '✓ Metals.live homepage accessible (size: ' . strlen($html) . ' bytes)';
+                    $debugLog[] = '✓ Metals.live homepage accessible (size: ' . strlen($html) . ' bytes, content starts: ' . substr($html, 0, 100) . ')';
                     
                     // Extract prices from JavaScript data embedded in page
-                    // Look for various patterns: {"gold":2045.50}, "gold": 2045.50, etc.
+                    // Use # as delimiter to avoid conflicts with / in patterns
                     $metals = ['gold', 'silver', 'platinum', 'palladium'];
                     foreach ($metals as $metal) {
                         if ($normalized[$metal] !== null) continue;
                         
                         // Try multiple regex patterns to find the price
                         $patterns = [
-                            '/"' . $metal . '"\s*:\s*([0-9.]+)/i',  // JSON style
-                            '/' . $metal . '["\']?\s*[:\-=]+\s*([0-9.]+)/i',  // Plain text style
-                            'data-' . $metal . '["\']?\s*=\s*["\']?([0-9.]+)/i',  // HTML attribute style
+                            '#"' . preg_quote($metal) . '"\s*:\s*([0-9.]+)#i',  // JSON style: "gold":2045.50
+                            '#' . preg_quote($metal) . '["\']?\s*:\s*([0-9.]+)#i',  // Plain text: gold:2045.50
+                            '#data-' . preg_quote($metal) . '=["\']?([0-9.]+)#i',  // HTML data attribute
                         ];
                         
                         $price = null;
                         foreach ($patterns as $pattern) {
                             if (preg_match($pattern, $html, $matches)) {
                                 $price = (float) $matches[1];
-                                $debugLog[] = "    Found {$metal} with pattern: \${$price}";
+                                $debugLog[] = "    ✓ Found {$metal}: \${$price}";
                                 break;
                             }
                         }
@@ -271,12 +225,12 @@ Route::get('/api/metals/prices', function () {
                             if ($price >= $min && $price <= $max) {
                                 $normalized[$metal] = round($price, 2);
                                 $gotRealData = true;
-                                $debugLog[] = "  ✓ {$metal}: \${$normalized[$metal]}/oz (scraped from metals.live)";
+                                $debugLog[] = "  ✓ {$metal}: \${$normalized[$metal]}/oz (metals.live)";
                             } else {
-                                $debugLog[] = "  ✗ {$metal}: \${$price}/oz outside range [\${$min}-\${$max}]";
+                                $debugLog[] = "  ⚠️  {$metal}: \${$price}/oz outside range [\${$min}-\${$max}]";
                             }
                         } else {
-                            $debugLog[] = "  ✗ {$metal}: No price pattern matched in HTML";
+                            $debugLog[] = "  ✗ {$metal}: No price pattern matched";
                         }
                     }
                 } else {
