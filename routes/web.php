@@ -56,9 +56,10 @@ Route::get('/api/teachers', [\App\Http\Controllers\Admin\TeacherController::clas
 
 // Public metals price API (used by scrap calculator component)
 Route::get('/api/metals/prices', function () {
-    $cacheKey = 'metals_live_prices_usd';
+    $cacheKey = 'metals_scrape_prices_usd';
+    $lastGoodKey = 'metals_scrape_last_good_usd';
 
-    $payload = \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function () {
+    $payload = \Illuminate\Support\Facades\Cache::remember($cacheKey, 120, function () use ($lastGoodKey) {
         $debugLog = [];
         $normalized = [
             'gold' => null,
@@ -66,210 +67,196 @@ Route::get('/api/metals/prices', function () {
             'platinum' => null,
             'palladium' => null,
         ];
-        
-        // Track if we got any real data from APIs (not fallbacks)
-        $gotRealData = false;
-        
-        // Price validation ranges
-        $priceRanges = [
+
+        $ranges = [
             'gold' => [500, 3500],
             'silver' => [5, 200],
             'platinum' => [500, 2000],
             'palladium' => [500, 3000],
         ];
 
-        // Primary source: Frankfurter API (ECB precious metals data via exchange rates)
-        // This is the most reliable free API - maintained by major institution, no rate limits
-        try {
-            $debugLog[] = '🔄 Primary: Frankfurter API (ECB data)';
-            
-            $response = \Illuminate\Support\Facades\Http::timeout(10)
-                ->withoutVerifying()
-                ->withHeaders([
-                    'User-Agent' => 'Calculator/1.0',
-                    'Accept' => 'application/json'
-                ])
-                ->get('https://api.frankfurter.dev/latest', [
-                    'base' => 'USD',
-                    'symbols' => 'XAU,XAG,XPT,XPD'
-                ]);
+        $fallback = [
+            'gold' => 2045.50,
+            'silver' => 27.30,
+            'platinum' => 1050.75,
+            'palladium' => 1125.25,
+        ];
 
-            $debugLog[] = '📥 Frankfurter Response Status: ' . $response->status();
+        $lastGood = \Illuminate\Support\Facades\Cache::get($lastGoodKey, []);
 
-            if ($response->ok()) {
-                $data = $response->json();
-                $rates = $data['rates'] ?? [];
-                $debugLog[] = '✓ Frankfurter returned rates';
-                
-                // Map metal codes to our names
-                $metalMap = [
-                    'XAU' => 'gold',
-                    'XAG' => 'silver',
-                    'XPT' => 'platinum',
-                    'XPD' => 'palladium',
-                ];
+        $sourcesByMetal = [
+            'gold' => [
+                'https://www.metal.com/Gold',
+                'https://www.bullionbypost.co.uk/gold-price/',
+                'https://www.kitco.com/charts/livegold.html',
+            ],
+            'silver' => [
+                'https://www.metal.com/Silver',
+                'https://www.bullionbypost.co.uk/silver-price/',
+                'https://www.kitco.com/charts/livesilver.html',
+            ],
+            'platinum' => [
+                'https://www.metal.com/Platinum',
+                'https://www.bullionbypost.co.uk/platinum-price/',
+                'https://www.kitco.com/charts/liveplatinum.html',
+            ],
+            'palladium' => [
+                'https://www.metal.com/Palladium',
+                'https://www.bullionbypost.co.uk/palladium-price/',
+                'https://www.kitco.com/charts/livepalladium.html',
+            ],
+        ];
 
-                foreach ($metalMap as $code => $metal) {
-                    // Frankfurter returns USD to metal rates (e.g., 1 USD = 0.00048 XAU)
-                    // We need to invert: 1 ounce in USD = 1 / rate
-                    $rate = $rates[$code] ?? null;
-                    
-                    if ($rate && is_numeric($rate) && $rate > 0) {
-                        $price = 1 / $rate;  // Invert to get USD per ounce
-                        list($min, $max) = $priceRanges[$metal];
-                        
-                        if ($price >= $min && $price <= $max) {
-                            $normalized[$metal] = round($price, 2);
-                            $gotRealData = true;
-                            $debugLog[] = "  ✓ {$metal}: \${$normalized[$metal]}/oz (Frankfurter)";
-                        } else {
-                            $debugLog[] = "  ⚠️  {$metal}: \${$price}/oz outside range [\${$min}-\${$max}]";
-                        }
-                    }
-                }
-            } else {
-                $debugLog[] = '❌ Frankfurter returned status ' . $response->status();
-            }
-        } catch (\Throwable $e) {
-            $debugLog[] = '❌ Frankfurter Exception: ' . $e->getMessage();
-            \Log::warning('Metals primary (Frankfurter) failed', ['error' => $e->getMessage()]);
-        }
+        $extractCandidates = static function (string $html, string $metal): array {
+            $text = html_entity_decode($html, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            $compact = preg_replace('/\s+/', ' ', $text);
+            $clean = str_replace(',', '', $compact);
 
-        // Tertiary source: Skip Twelve Data (requires registered API key, demo key returns 401)
-        // Instead try directly scraping metals.live which we know is accessible
-        
-        // Quaternary source: Web Scraping from XE.com (as backup if others fail)
-        if (in_array(null, $normalized, true)) {
-            $debugLog[] = '🔄 Quaternary: Web Scraping XE.com prices';
-            try {
-                $response = \Illuminate\Support\Facades\Http::timeout(10)
-                    ->withoutVerifying()
-                    ->get('https://www.xe.com/currency_charts/xau_usd');
-                
-                if ($response->ok()) {
-                    $html = $response->body();
-                    $debugLog[] = '✓ XE.com accessible (size: ' . strlen($html) . ' bytes)';
-                    
-                    // Try multiple patterns to extract gold price (using # delimiter)
-                    $patterns = [
-                        '#XAU\s+USD[^>]*?>([0-9,]+\.[0-9]{2})#i',
-                        '#([0-9,]+\.[0-9]{2})[^<]*?XAU\s+USD#i',
-                        '#data-value=["\']?([0-9.]+)["\']?[^>]*XAU#i',
-                    ];
-                    
-                    $price = null;
-                    foreach ($patterns as $pattern) {
-                        if (preg_match($pattern, $html, $matches)) {
-                            $price = (float) str_replace(',', '', $matches[1]);
-                            $debugLog[] = "    ✓ Found gold price: \${$price}";
-                            break;
-                        }
-                    }
-                    
-                    if ($price) {
-                        list($min, $max) = $priceRanges['gold'];
-                        if ($price >= $min && $price <= $max) {
-                            $normalized['gold'] = round($price, 2);
-                            $gotRealData = true;
-                            $debugLog[] = "  ✓ gold: \${$normalized['gold']}/oz (XE.com)";
-                        } else {
-                            $debugLog[] = "  ⚠️  gold: \${$price}/oz outside range [\${$min}-\${$max}]";
-                        }
-                    } else {
-                        $debugLog[] = "  ✗ No gold price pattern matched on XE.com";
-                    }
-                } else {
-                    $debugLog[] = '❌ XE.com returned status ' . $response->status();
-                }
-            } catch (\Throwable $e) {
-                $debugLog[] = '❌ XE.com scraping Exception: ' . $e->getMessage();
-            }
-        }
-        
-        // Tertiary source: Scrape metals.live homepage for embedded price data
-        if (in_array(null, $normalized, true)) {
-            $debugLog[] = '🔄 Tertiary: Scraping metals.live homepage';
-            try {
-                $response = \Illuminate\Support\Facades\Http::timeout(10)
-                    ->withoutVerifying()
-                    ->get('https://metals.live/');
-                
-                if ($response->ok()) {
-                    $html = $response->body();
-                    $debugLog[] = '✓ Metals.live homepage accessible (size: ' . strlen($html) . ' bytes, content starts: ' . substr($html, 0, 100) . ')';
-                    
-                    // Extract prices from JavaScript data embedded in page
-                    // Use # as delimiter to avoid conflicts with / in patterns
-                    $metals = ['gold', 'silver', 'platinum', 'palladium'];
-                    foreach ($metals as $metal) {
-                        if ($normalized[$metal] !== null) continue;
-                        
-                        // Try multiple regex patterns to find the price
-                        $patterns = [
-                            '#"' . preg_quote($metal) . '"\s*:\s*([0-9.]+)#i',  // JSON style: "gold":2045.50
-                            '#' . preg_quote($metal) . '["\']?\s*:\s*([0-9.]+)#i',  // Plain text: gold:2045.50
-                            '#data-' . preg_quote($metal) . '=["\']?([0-9.]+)#i',  // HTML data attribute
-                        ];
-                        
-                        $price = null;
-                        foreach ($patterns as $pattern) {
-                            if (preg_match($pattern, $html, $matches)) {
-                                $price = (float) $matches[1];
-                                $debugLog[] = "    ✓ Found {$metal}: \${$price}";
-                                break;
-                            }
-                        }
-                        
-                        if ($price) {
-                            list($min, $max) = $priceRanges[$metal];
-                            if ($price >= $min && $price <= $max) {
-                                $normalized[$metal] = round($price, 2);
-                                $gotRealData = true;
-                                $debugLog[] = "  ✓ {$metal}: \${$normalized[$metal]}/oz (metals.live)";
-                            } else {
-                                $debugLog[] = "  ⚠️  {$metal}: \${$price}/oz outside range [\${$min}-\${$max}]";
-                            }
-                        } else {
-                            $debugLog[] = "  ✗ {$metal}: No price pattern matched";
-                        }
-                    }
-                } else {
-                    $debugLog[] = '❌ Metals.live returned status ' . $response->status();
-                }
-            } catch (\Throwable $e) {
-                $debugLog[] = '❌ Metals.live scraping Exception: ' . $e->getMessage();
-            }
-        }
-        
-        // Tertiary fallback: Hardcoded reasonable prices (safety net)
-        if (!$gotRealData) {
-            $debugLog[] = '⚠️  All live sources failed, using fallback prices (approximate)';
-            \Log::warning('Metals calculator - all live API sources failed, using fallback prices');
-            
-            $normalized = [
-                'gold' => 2045.50,
-                'silver' => 27.30,
-                'platinum' => 1050.75,
-                'palladium' => 1125.25,
+            $keywords = [
+                'gold' => '(?:gold|xau)',
+                'silver' => '(?:silver|xag)',
+                'platinum' => '(?:platinum|xpt)',
+                'palladium' => '(?:palladium|xpd)',
             ];
-            foreach ($normalized as $metal => $price) {
-                $debugLog[] = "  📝 {$metal}: \${$price}/oz (fallback)";
+
+            $needle = $keywords[$metal] ?? $metal;
+            $candidates = [];
+
+            $patterns = [
+                '#"price"\s*:\s*"?([0-9]+(?:\.[0-9]+)?)"?#i',
+                '#"last"\s*:\s*"?([0-9]+(?:\.[0-9]+)?)"?#i',
+                '#'.$needle.'[^0-9]{0,60}\$?\s*([0-9]+(?:\.[0-9]+)?)#i',
+                '#\$\s*([0-9]+(?:\.[0-9]+)?)\s*(?:usd)?\s*(?:/|per)\s*oz#i',
+                '#([0-9]+(?:\.[0-9]+)?)\s*(?:usd)?\s*(?:/|per)\s*oz[^a-z]{0,30}'.$needle.'#i',
+            ];
+
+            foreach ($patterns as $pattern) {
+                if (preg_match_all($pattern, $clean, $matches) && !empty($matches[1])) {
+                    foreach ($matches[1] as $raw) {
+                        if (is_numeric($raw)) {
+                            $candidates[] = (float) $raw;
+                        }
+                    }
+                }
+            }
+
+            return array_values(array_unique($candidates));
+        };
+
+        $selectBest = static function (array $candidates, array $range, ?float $anchor): ?float {
+            [$min, $max] = $range;
+            $valid = array_values(array_filter($candidates, static function ($value) use ($min, $max) {
+                return is_numeric($value) && $value >= $min && $value <= $max;
+            }));
+
+            if (empty($valid)) {
+                return null;
+            }
+
+            $target = $anchor ?? (($min + $max) / 2);
+            usort($valid, static function ($a, $b) use ($target) {
+                return abs($a - $target) <=> abs($b - $target);
+            });
+
+            return round((float) $valid[0], 2);
+        };
+
+        $hasScraped = false;
+        $http = \Illuminate\Support\Facades\Http::timeout(10)
+            ->retry(2, 300)
+            ->withoutVerifying()
+            ->withHeaders([
+                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36',
+                'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language' => 'en-US,en;q=0.9',
+                'Cache-Control' => 'no-cache',
+            ]);
+
+        foreach ($sourcesByMetal as $metal => $urls) {
+            foreach ($urls as $url) {
+                try {
+                    $response = $http->get($url);
+                    $debugLog[] = "SCRAPE {$metal}: {$url} -> HTTP {$response->status()}";
+
+                    if (!$response->ok()) {
+                        continue;
+                    }
+
+                    $html = $response->body();
+                    if (trim($html) === '') {
+                        $debugLog[] = "SCRAPE {$metal}: empty body";
+                        continue;
+                    }
+
+                    $candidates = $extractCandidates($html, $metal);
+                    $anchor = isset($lastGood[$metal]) && is_numeric($lastGood[$metal]) ? (float) $lastGood[$metal] : null;
+                    $picked = $selectBest($candidates, $ranges[$metal], $anchor);
+
+                    if ($picked !== null) {
+                        $normalized[$metal] = $picked;
+                        $hasScraped = true;
+                        $debugLog[] = "SCRAPE {$metal}: selected {$picked} from " . count($candidates) . ' candidates';
+                        break;
+                    }
+
+                    $debugLog[] = "SCRAPE {$metal}: no valid candidates";
+                } catch (\Throwable $e) {
+                    $debugLog[] = "SCRAPE {$metal}: exception " . $e->getMessage();
+                }
             }
         }
-        
-        // Convert ounce prices to gram prices (1 ounce = 31.1035 grams)
-        $prices_per_gram = [];
-        foreach ($normalized as $metal => $price_per_oz) {
-            $prices_per_gram[$metal] = round($price_per_oz / 31.1035, 4);
+
+        // Fill gaps from last known good scraped values.
+        $usedStale = false;
+        foreach ($normalized as $metal => $price) {
+            if ($price !== null) {
+                continue;
+            }
+
+            $stale = $lastGood[$metal] ?? null;
+            if (is_numeric($stale)) {
+                [$min, $max] = $ranges[$metal];
+                $stalePrice = (float) $stale;
+                if ($stalePrice >= $min && $stalePrice <= $max) {
+                    $normalized[$metal] = round($stalePrice, 2);
+                    $usedStale = true;
+                    $debugLog[] = "STALE {$metal}: {$normalized[$metal]}";
+                }
+            }
         }
-        
+
+        // Final safety net: hardcoded fallback for any still missing metals.
+        $usedFallback = false;
+        foreach ($normalized as $metal => $price) {
+            if ($price !== null) {
+                continue;
+            }
+
+            $normalized[$metal] = $fallback[$metal];
+            $usedFallback = true;
+            $debugLog[] = "FALLBACK {$metal}: {$normalized[$metal]}";
+        }
+
+        // Update last known good only when at least one value was freshly scraped.
+        if ($hasScraped) {
+            \Illuminate\Support\Facades\Cache::put($lastGoodKey, $normalized, now()->addDays(7));
+            $debugLog[] = 'LAST_GOOD updated';
+        }
+
+        $source = 'scraped';
+        if (!$hasScraped && $usedStale && !$usedFallback) {
+            $source = 'stale';
+        } elseif (!$hasScraped && ($usedFallback || !$usedStale)) {
+            $source = 'fallback';
+        } elseif ($hasScraped && ($usedStale || $usedFallback)) {
+            $source = 'scraped-partial';
+        }
+
         return [
-            'success' => true,
             'prices_per_ounce_usd' => $normalized,
-            'prices_per_gram_usd' => $prices_per_gram,
-            'source' => $gotRealData ? 'live' : 'fallback',
+            'source' => $source,
             'last_updated' => now()->toIso8601String(),
-            'debug' => $debugLog,  // Always send debug logs to diagnose issues
+            'debug' => $debugLog,
         ];
     });
 
