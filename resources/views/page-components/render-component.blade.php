@@ -9664,6 +9664,9 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                             console.log('📊 [Metals API] Full API Response:', data);
                             console.log('💰 [Metals API] Price Source:', data.source || 'unknown', 
                                        data.source === 'live' ? '(✓ REAL MARKET PRICES)' : 
+                                       data.source === 'scraped' ? '(✓ SCRAPED MARKET PRICES)' :
+                                       data.source === 'scraped-partial' ? '(⚠ MIXED: SCRAPED + FALLBACK)' :
+                                       data.source === 'stale' ? '(⚠ USING LAST KNOWN PRICES)' :
                                        data.source === 'fallback' ? '(⚠ FALLBACK - APIs FAILED)' :
                                        data.source === 'partial' ? '(⚠ SOME DEMO PRICES)' : '(⚠ DEMO PRICES)');
                             
@@ -9690,16 +9693,20 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
 
                             if (elUpdated) {
                                 const stamp = data.last_updated ? new Date(data.last_updated) : new Date();
-                                const sourceLabel = data.source === 'live' 
-                                    ? '✓ Live Market' 
-                                    : '⚠ Approximate (API Failed)';
+                                const sourceLabel = data.source === 'live' || data.source === 'scraped'
+                                    ? '✓ Market Data'
+                                    : data.source === 'scraped-partial'
+                                    ? '⚠ Mixed Data'
+                                    : data.source === 'stale'
+                                    ? '⚠ Last Known Data'
+                                    : '⚠ Approximate Data';
                                 elUpdated.textContent = `Updated: ${stamp.toLocaleTimeString()} (${sourceLabel})`;
                             }
                         } catch (error) {
                             console.error('❌ [Metals API] Price load failed:', error);
                             console.error('❌ [Metals API] Error details:', error.message, error.stack);
                             if (elRate) {
-                                elRate.textContent = 'Unable to fetch live prices right now';
+                                elRate.textContent = 'Unable to refresh prices right now (using last values)';
                             }
                         }
                     }

@@ -193,6 +193,7 @@ Route::get('/api/metals/prices', function () {
         $http = \Illuminate\Support\Facades\Http::timeout(10)
             ->retry(2, 300)
             ->withoutVerifying()
+            ->withOptions(['http_errors' => false])
             ->withHeaders([
                 'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36',
                 'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -213,6 +214,52 @@ Route::get('/api/metals/prices', function () {
                         if ($response->status() === 403 && strpos($url, 'goldprice.org') !== false) {
                             $debugLog[] = "SCRAPE {$metal}: goldprice blocked by remote firewall";
                         }
+                        continue;
+                    }
+
+                    // goldprice data feed: parse directly as JSON for high accuracy.
+                    if (strpos($url, 'data-asg.goldprice.org') !== false) {
+                        $json = $response->json();
+                        $record = null;
+                        if (is_array($json)) {
+                            $record = $json[0] ?? null;
+                        } elseif (is_array($json['items'] ?? null)) {
+                            $record = $json['items'][0] ?? null;
+                        }
+
+                        if (is_array($record)) {
+                            $fieldMap = [
+                                'gold' => ['xauPrice', 'XAU', 'XAUrate'],
+                                'silver' => ['xagPrice', 'XAG', 'XAGrate'],
+                                'platinum' => ['xptPrice', 'XPT', 'XPTrate'],
+                                'palladium' => ['xpdPrice', 'XPD', 'XPDrate'],
+                            ];
+
+                            foreach ($fieldMap[$metal] as $field) {
+                                $value = $record[$field] ?? null;
+                                if (!is_numeric($value)) {
+                                    continue;
+                                }
+
+                                $candidate = (float) $value;
+                                $anchor = isset($lastGood[$metal]) && is_numeric($lastGood[$metal])
+                                    ? (float) $lastGood[$metal]
+                                    : (float) $fallback[$metal];
+
+                                [$min, $max] = $ranges[$metal];
+                                $drift = $anchor > 0 ? abs($candidate - $anchor) / $anchor : 1;
+                                if ($candidate >= $min && $candidate <= $max && $drift <= $maxDeviation[$metal]) {
+                                    $acceptedBySource[] = round($candidate, 2);
+                                    $debugLog[] = "SCRAPE {$metal}: goldprice-json {$field}={$candidate}";
+                                } else {
+                                    $debugLog[] = "SCRAPE {$metal}: goldprice-json rejected {$field}={$candidate}";
+                                }
+                                break;
+                            }
+                        } else {
+                            $debugLog[] = "SCRAPE {$metal}: goldprice-json missing record";
+                        }
+
                         continue;
                     }
 
