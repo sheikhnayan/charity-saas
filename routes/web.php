@@ -157,16 +157,26 @@ Route::get('/api/metals/prices', function () {
                     
                     if ($response->ok()) {
                         $data = $response->json();
-                        $price = $data['price'] ?? null;
+                        $debugLog[] = "    Response: " . json_encode($data);
+                        
+                        // Try multiple possible field names
+                        $price = $data['price'] ?? $data['close'] ?? $data['last'] ?? null;
                         
                         if ($price && is_numeric($price)) {
+                            $price = (float) $price;
                             list($min, $max) = $priceRanges[$metal];
                             if ($price >= $min && $price <= $max) {
                                 $normalized[$metal] = round($price, 2);
                                 $gotRealData = true;
                                 $debugLog[] = "  ✓ {$metal}: \${$normalized[$metal]}/oz (Twelve Data)";
+                            } else {
+                                $debugLog[] = "  ✗ {$metal}: \${$price}/oz outside range [\${$min}-\${$max}]";
                             }
+                        } else {
+                            $debugLog[] = "  ✗ {$metal}: No price field found in response";
                         }
+                    } else {
+                        $debugLog[] = "  ✗ {$metal}: HTTP " . $response->status();
                     }
                 }
             } catch (\Throwable $e) {
@@ -174,79 +184,106 @@ Route::get('/api/metals/prices', function () {
             }
         }
         
-        // Quaternary source: Web Scraping from TradingView or similar (as backup if others fail)
+        // Quaternary source: Web Scraping from XE.com (as backup if others fail)
         if (in_array(null, $normalized, true)) {
-            $debugLog[] = '🔄 Quaternary: Web Scraping precious metals prices';
+            $debugLog[] = '🔄 Quaternary: Web Scraping XE.com prices';
             try {
-                // Scrape from a financial website that shows precious metals prices
-                // Using simple HTML scraping to extract prices from publicly available data
-                
                 $response = \Illuminate\Support\Facades\Http::timeout(10)
                     ->withoutVerifying()
-                    ->get('https://www.xe.com/currency_charts/xau_usd');  // XAU/USD chart page
+                    ->get('https://www.xe.com/currency_charts/xau_usd');
                 
                 if ($response->ok()) {
                     $html = $response->body();
+                    $debugLog[] = '✓ XE.com accessible (size: ' . strlen($html) . ' bytes)';
                     
-                    // Extract gold price from XE.com page using regex
-                    // Look for price patterns like "2045.50" near "XAU USD"
-                    if (preg_match('/XAU\s+USD[^>]*>([0-9,]+\.[0-9]{2})</i', $html, $matches)) {
-                        $price = (float) str_replace(',', '', $matches[1] ?? 0);
-                        list($min, $max) = $priceRanges['gold'];
-                        if ($price >= $min && $price <= $max) {
-                            $normalized['gold'] = $price;
-                            $gotRealData = true;
-                            $debugLog[] = "  ✓ gold: \${$normalized['gold']}/oz (scraped from XE.com)";
+                    // Try multiple patterns to extract gold price
+                    $patterns = [
+                        '/XAU\s+USD[^>]*>([0-9,]+\.[0-9]{2})</i',
+                        '/([0-9,]+\.[0-9]{2})[^<]*XAU\s+USD/i',
+                        '/data-value=["\']([0-9.]+)["\'][^>]*XAU/i',
+                    ];
+                    
+                    $price = null;
+                    foreach ($patterns as $pattern) {
+                        if (preg_match($pattern, $html, $matches)) {
+                            $price = (float) str_replace(',', '', $matches[1]);
+                            $debugLog[] = "    Found gold price with pattern: \${$price}";
+                            break;
                         }
                     }
-                }
-            } catch (\Throwable $e) {
-                $debugLog[] = '⚠️  Web scraping Exception: ' . $e->getMessage();
-            }
-        }
-        
-        // Quintary source: Alternative CSV endpoint that might be less restricted
-        if (in_array(null, $normalized, true)) {
-            $debugLog[] = '🔄 Quintary: Alternative commodity data source';
-            try {
-                // Try fetching from an alternative endpoint
-                $response = \Illuminate\Support\Facades\Http::timeout(10)
-                    ->withoutVerifying()
-                    ->get('https://metals.live/');  // Try fetching the main page instead
-                
-                if ($response->ok()) {
-                    $html = $response->body();
-                    $debugLog[] = '✓ Metals.live homepage accessible';
                     
-                    // Extract prices from JavaScript data embedded in page
-                    // Look for patterns like "gold":2045.50 or similar
-                    if (preg_match('/"gold"\s*:\s*([0-9.]+)/i', $html, $matches)) {
-                        $price = (float) $matches[1];
+                    if ($price) {
                         list($min, $max) = $priceRanges['gold'];
                         if ($price >= $min && $price <= $max) {
                             $normalized['gold'] = round($price, 2);
                             $gotRealData = true;
-                            $debugLog[] = "  ✓ gold: \${$normalized['gold']}/oz (scraped from metals.live)";
+                            $debugLog[] = "  ✓ gold: \${$normalized['gold']}/oz (scraped from XE.com)";
+                        } else {
+                            $debugLog[] = "  ✗ gold: \${$price}/oz outside range [\${$min}-\${$max}]";
                         }
+                    } else {
+                        $debugLog[] = "  ✗ No gold price pattern matched on XE.com";
                     }
+                } else {
+                    $debugLog[] = '❌ XE.com returned status ' . $response->status();
+                }
+            } catch (\Throwable $e) {
+                $debugLog[] = '❌ XE.com scraping Exception: ' . $e->getMessage();
+            }
+        }
+        
+        // Quintary source: Scrape metals.live homepage for embedded price data
+        if (in_array(null, $normalized, true)) {
+            $debugLog[] = '🔄 Quintary: Scraping metals.live homepage';
+            try {
+                $response = \Illuminate\Support\Facades\Http::timeout(10)
+                    ->withoutVerifying()
+                    ->get('https://metals.live/');
+                
+                if ($response->ok()) {
+                    $html = $response->body();
+                    $debugLog[] = '✓ Metals.live homepage accessible (size: ' . strlen($html) . ' bytes)';
                     
-                    // Extract silver, platinum, palladium similarly
-                    $metals = ['silver', 'platinum', 'palladium'];
+                    // Extract prices from JavaScript data embedded in page
+                    // Look for various patterns: {"gold":2045.50}, "gold": 2045.50, etc.
+                    $metals = ['gold', 'silver', 'platinum', 'palladium'];
                     foreach ($metals as $metal) {
                         if ($normalized[$metal] !== null) continue;
-                        if (preg_match('/"' . $metal . '"\s*:\s*([0-9.]+)/i', $html, $matches)) {
-                            $price = (float) $matches[1];
+                        
+                        // Try multiple regex patterns to find the price
+                        $patterns = [
+                            '/"' . $metal . '"\s*:\s*([0-9.]+)/i',  // JSON style
+                            '/' . $metal . '["\']?\s*[:\-=]+\s*([0-9.]+)/i',  // Plain text style
+                            'data-' . $metal . '["\']?\s*=\s*["\']?([0-9.]+)/i',  // HTML attribute style
+                        ];
+                        
+                        $price = null;
+                        foreach ($patterns as $pattern) {
+                            if (preg_match($pattern, $html, $matches)) {
+                                $price = (float) $matches[1];
+                                $debugLog[] = "    Found {$metal} with pattern: \${$price}";
+                                break;
+                            }
+                        }
+                        
+                        if ($price) {
                             list($min, $max) = $priceRanges[$metal];
                             if ($price >= $min && $price <= $max) {
                                 $normalized[$metal] = round($price, 2);
                                 $gotRealData = true;
-                                $debugLog[] = "  ✓ {$metal}: \${$normalized[$metal]}/oz (scraped)";
+                                $debugLog[] = "  ✓ {$metal}: \${$normalized[$metal]}/oz (scraped from metals.live)";
+                            } else {
+                                $debugLog[] = "  ✗ {$metal}: \${$price}/oz outside range [\${$min}-\${$max}]";
                             }
+                        } else {
+                            $debugLog[] = "  ✗ {$metal}: No price pattern matched in HTML";
                         }
                     }
+                } else {
+                    $debugLog[] = '❌ Metals.live returned status ' . $response->status();
                 }
             } catch (\Throwable $e) {
-                $debugLog[] = '❌ Alternative source Exception: ' . $e->getMessage();
+                $debugLog[] = '❌ Metals.live scraping Exception: ' . $e->getMessage();
             }
         }
         
