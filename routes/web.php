@@ -94,11 +94,15 @@ Route::get('/api/metals/prices', function () {
 
         $sourcesByMetal = [
             'gold' => [
+                'https://goldprice.org/',
+                'https://goldprice.org/gold-price.html',
                 'https://www.metal.com/Gold',
                 'https://www.bullionbypost.co.uk/gold-price/',
                 'https://www.kitco.com/charts/livegold.html',
             ],
             'silver' => [
+                'https://goldprice.org/',
+                'https://goldprice.org/silver-price.html',
                 'https://www.metal.com/Silver',
                 'https://www.bullionbypost.co.uk/silver-price/',
                 'https://www.kitco.com/charts/livesilver.html',
@@ -133,6 +137,10 @@ Route::get('/api/metals/prices', function () {
             $patterns = [
                 '#"price"\s*:\s*"?([0-9]+(?:\.[0-9]+)?)"?#i',
                 '#"last"\s*:\s*"?([0-9]+(?:\.[0-9]+)?)"?#i',
+                '#"xauPrice"\s*:\s*"?([0-9]+(?:\.[0-9]+)?)"?#i',
+                '#"xagPrice"\s*:\s*"?([0-9]+(?:\.[0-9]+)?)"?#i',
+                '#"XAU"\s*:\s*"?([0-9]+(?:\.[0-9]+)?)"?#i',
+                '#"XAG"\s*:\s*"?([0-9]+(?:\.[0-9]+)?)"?#i',
                 '#'.$needle.'[^0-9]{0,60}\$?\s*([0-9]+(?:\.[0-9]+)?)#i',
                 '#\$\s*([0-9]+(?:\.[0-9]+)?)\s*(?:usd)?\s*(?:/|per)\s*oz#i',
                 '#([0-9]+(?:\.[0-9]+)?)\s*(?:usd)?\s*(?:/|per)\s*oz[^a-z]{0,30}'.$needle.'#i',
