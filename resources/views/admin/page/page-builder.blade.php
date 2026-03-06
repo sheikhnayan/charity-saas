@@ -4335,7 +4335,7 @@ button a:hover {
                 defaultMetal: 'gold',
                 weightUnit: 'grams',
                 defaultWeight: '10',
-                defaultPurity: '75',
+                defaultPurity: '18',
                 metalDeductions: { gold: 0, silver: 0, platinum: 0, palladium: 0 },
                 showLivePrices: true,
                 refreshSeconds: 60
@@ -4359,7 +4359,7 @@ button a:hover {
                         <div style="margin-top:14px;border:1px dashed #cbd5e1;border-radius:10px;padding:12px;background:#fff;">
                             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:#334155;">
                                 <div>Weight: ${d.defaultWeight || '0'} ${d.weightUnit === 'ounces' ? 'oz' : 'g'}</div>
-                                <div>Purity: ${d.defaultPurity || '75'}%</div>
+                                <div>Purity: ${(d.defaultPurity || '18')}K</div>
                             </div>
                             <div style="margin-top:10px;font-size:20px;font-weight:700;color:#0f766e;">Estimated Value: --</div>
                         </div>
@@ -8399,7 +8399,7 @@ break;
                 defaultMetal: 'gold',
                 weightUnit: 'grams',
                 defaultWeight: '10',
-                defaultPurity: '75',
+                defaultPurity: '18',
                 metalDeductions: { gold: 0, silver: 0, platinum: 0, palladium: 0 },
                 showLivePrices: true,
                 refreshSeconds: 60
@@ -8476,13 +8476,11 @@ break;
                     <label>Default Purity (Karats)</label>
                     <select onchange="updateScrapCalculatorField('defaultPurity', this.value)">
                         <option value="24" ${scrapData.defaultPurity === '24' ? 'selected' : ''}>24K (100% Pure)</option>
-                        <option value="22" ${scrapData.defaultPurity === '22' ? 'selected' : ''}>22K (91.67% Pure)</option>
-                        <option value="18" ${(scrapData.defaultPurity === '18' || !scrapData.defaultPurity) ? 'selected' : ''}>18K (75% Pure)</option>
-                        <option value="14" ${scrapData.defaultPurity === '14' ? 'selected' : ''}>14K (58.33% Pure)</option>
-                        <option value="10" ${scrapData.defaultPurity === '10' ? 'selected' : ''}>10K (41.67% Pure)</option>
-                        <option value="9" ${scrapData.defaultPurity === '9' ? 'selected' : ''}>9K (37.5% Pure)</option>
+                        <option value="22" ${scrapData.defaultPurity === '22' ? 'selected' : ''}>22K (91.6% Pure)</option>
+                        <option value="21" ${scrapData.defaultPurity === '21' ? 'selected' : ''}>21K (87.5% Pure)</option>
+                        <option value="18" ${(scrapData.defaultPurity === '18' || !scrapData.defaultPurity) ? 'selected' : ''}>18K (75.0% Pure)</option>
                     </select>
-                    <small style="display:block;margin-top:4px;color:#666;">Standard karat values for gold purity</small>
+                    <small style="display:block;margin-top:4px;color:#666;">Purity values are fixed to your configured standard set.</small>
                 </div>
 
                 <div class="form-group">
@@ -17424,7 +17422,7 @@ function applyResponsiveStyles() {
                     defaultMetal: 'gold',
                     weightUnit: 'grams',
                     defaultWeight: '10',
-                    defaultPurity: '75',
+                    defaultPurity: '18',
                     metalDeductions: { gold: 0, silver: 0, platinum: 0, palladium: 0 },
                     showLivePrices: true,
                     refreshSeconds: 60
@@ -18040,7 +18038,7 @@ function applyResponsiveStyles() {
                 defaultMetal: 'gold',
                 weightUnit: 'grams',
                 defaultWeight: '10',
-                defaultPurity: '75',
+                defaultPurity: '18',
                 metalDeductions: { gold: 0, silver: 0, platinum: 0, palladium: 0 },
                 showLivePrices: true,
                 refreshSeconds: 60
@@ -19958,7 +19956,7 @@ function applyResponsiveStyles() {
                 defaultMetal: 'gold',
                 weightUnit: 'grams',
                 defaultWeight: '10',
-                defaultPurity: '75',
+                defaultPurity: '18',
                 metalDeductions: { gold: 0, silver: 0, platinum: 0, palladium: 0 },
                 showLivePrices: true,
                 refreshSeconds: 60

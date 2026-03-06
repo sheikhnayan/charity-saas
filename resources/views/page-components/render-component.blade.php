@@ -9411,6 +9411,9 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                 $weightUnit = $scrap['weightUnit'] ?? 'grams';
                 $defaultWeight = $scrap['defaultWeight'] ?? '10';
                 $defaultPurity = $scrap['defaultPurity'] ?? '18';
+                if (!in_array((string) $defaultPurity, ['24', '22', '21', '18'], true)) {
+                    $defaultPurity = '18';
+                }
                 $showLivePrices = isset($scrap['showLivePrices']) ? (bool) $scrap['showLivePrices'] : true;
                 $refreshSeconds = (int) ($scrap['refreshSeconds'] ?? 60);
                 if ($refreshSeconds < 15) {
@@ -9591,12 +9594,10 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                     <div class="scrap-field">
                         <label>Purity (Karats)</label>
                         <select id="{{ $componentId }}-purity">
-                            <option value="24" {{ $defaultPurity === '24' ? 'selected' : '' }}>24K</option>
-                            <option value="22" {{ $defaultPurity === '22' ? 'selected' : '' }}>22K</option>
-                            <option value="18" {{ ($defaultPurity === '18' || !$defaultPurity) ? 'selected' : '' }}>18K</option>
-                            <option value="14" {{ $defaultPurity === '14' ? 'selected' : '' }}>14K</option>
-                            <option value="10" {{ $defaultPurity === '10' ? 'selected' : '' }}>10K</option>
-                            <option value="9" {{ $defaultPurity === '9' ? 'selected' : '' }}>9K</option>
+                            <option value="24" {{ $defaultPurity === '24' ? 'selected' : '' }}>24K (100%)</option>
+                            <option value="22" {{ $defaultPurity === '22' ? 'selected' : '' }}>22K (91.6%)</option>
+                            <option value="21" {{ $defaultPurity === '21' ? 'selected' : '' }}>21K (87.5%)</option>
+                            <option value="18" {{ ($defaultPurity === '18' || !$defaultPurity) ? 'selected' : '' }}>18K (75.0%)</option>
                         </select>
                     </div>
                 </div>
@@ -9606,7 +9607,7 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                 @endif
 
                 <div class="result">
-                    <div class="label" style="cplor: #fff !Important">Estimated Scrap Value (USD)</div>
+                    <div class="label" style="color: #fff !Important">Estimated Scrap Value (USD)</div>
                     <div class="amount" id="{{ $componentId }}-result">$0.00</div>
                     <div class="calc-breakdown" id="{{ $componentId }}-calc-breakdown">Waiting for price and inputs...</div>
                     <div class="meta">
@@ -9658,6 +9659,17 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                         return base * (1 - pct);
                     }
 
+                    function getPurityRatio(karatValue) {
+                        const key = String(karatValue || '18');
+                        const map = {
+                            '24': 1.0,
+                            '22': 0.916,
+                            '21': 0.875,
+                            '18': 0.75,
+                        };
+                        return Object.prototype.hasOwnProperty.call(map, key) ? map[key] : 0.75;
+                    }
+
                     function renderCards() {
                         if (!showCards || !elCards) return;
 
@@ -9672,12 +9684,11 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                         const metal = elMetal ? elMetal.value : defaultMetal;
                         const unit = elUnit ? elUnit.value : 'grams';
                         const weight = parseFloat(elWeight ? elWeight.value : 0) || 0;
-                        const karats = parseFloat(elPurity ? elPurity.value : 18) || 18;
-                        const purityRatio = Math.max(0, Math.min(24, karats)) / 24;
+                        const purityCode = elPurity ? elPurity.value : '18';
+                        const purityRatio = getPurityRatio(purityCode);
 
                         const rawRate = unit === 'ounces' ? prices.ounce[metal] : prices.gram[metal];
                         const rate = getAdjustedRate(rawRate, metal);
-                        const deductionPercent = getDeductionPercent(metal);
                         const estimated = (rate || 0) * weight * purityRatio;
 
                         if (elResult) {
@@ -9688,13 +9699,13 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                             const purityPct = Math.round(purityRatio * 100);
                             const suffix = unit === 'ounces' ? '/oz' : '/g';
                             const safeRate = rate || 0;
-                            elBreakdown.textContent = `${weight} ${unit} x ${formatMoney(safeRate)}${suffix} (after ${deductionPercent}% deduction) x ${purityPct}% = ${formatMoney(estimated)}`;
+                            elBreakdown.textContent = `${weight} ${unit} x ${formatMoney(safeRate)}${suffix} x ${purityPct}% = ${formatMoney(estimated)}`;
                         }
 
                         if (elRate) {
                             const suffix = unit === 'ounces' ? '/oz' : '/g';
                             elRate.textContent = rate
-                                ? `Live ${metal} rate after ${deductionPercent}% deduction: ${formatMoney(rate)}${suffix}`
+                                ? `Live ${metal} rate: ${formatMoney(rate)}${suffix}`
                                 : `Live ${metal} rate unavailable`;
                         }
                     }
