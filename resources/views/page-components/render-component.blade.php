@@ -9526,6 +9526,16 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                         flex-wrap: wrap;
                     }
 
+                    #{{ $componentId }}-scrap .calc-breakdown {
+                        margin-top: 8px;
+                        font-size: 12px;
+                        color: #0f766e;
+                        background: #f0fdfa;
+                        border: 1px dashed #99f6e4;
+                        border-radius: 8px;
+                        padding: 8px 10px;
+                    }
+
                     @media (max-width: 768px) {
                         #{{ $componentId }}-scrap {
                             padding: 16px;
@@ -9585,8 +9595,9 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                 @endif
 
                 <div class="result">
-                    <div class="label">Estimated Scrap Value (USD)</div>
+                    <div class="label" style="cplor: #fff !Important">Estimated Scrap Value (USD)</div>
                     <div class="amount" id="{{ $componentId }}-result">$0.00</div>
+                    <div class="calc-breakdown" id="{{ $componentId }}-calc-breakdown">Waiting for price and inputs...</div>
                     <div class="meta">
                         <span id="{{ $componentId }}-rate">Loading live price...</span>
                         <span id="{{ $componentId }}-updated">--</span>
@@ -9606,6 +9617,7 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                     const elWeight = document.getElementById('{{ $componentId }}-weight');
                     const elPurity = document.getElementById('{{ $componentId }}-purity');
                     const elResult = document.getElementById('{{ $componentId }}-result');
+                    const elBreakdown = document.getElementById('{{ $componentId }}-calc-breakdown');
                     const elRate = document.getElementById('{{ $componentId }}-rate');
                     const elUpdated = document.getElementById('{{ $componentId }}-updated');
                     const elCards = document.getElementById('{{ $componentId }}-price-cards');
@@ -9641,6 +9653,13 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
 
                         if (elResult) {
                             elResult.textContent = formatMoney(estimated);
+                        }
+
+                        if (elBreakdown) {
+                            const purityPct = Math.round(purityRatio * 100);
+                            const suffix = unit === 'ounces' ? '/oz' : '/g';
+                            const safeRate = rate || 0;
+                            elBreakdown.textContent = `${weight} ${unit} x ${formatMoney(safeRate)}${suffix} x ${purityPct}% = ${formatMoney(estimated)}`;
                         }
 
                         if (elRate) {
@@ -9721,6 +9740,7 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                         elMetal.value = allowedMetals[0];
                     }
 
+                    calculate();
                     loadPrices();
                     setInterval(loadPrices, refreshMs);
                 })();
