@@ -84,6 +84,7 @@ Route::get('/api/metals/prices', function () {
             $debugLog[] = '🔄 Primary: Frankfurter API (ECB data) - No key required';
             
             $response = \Illuminate\Support\Facades\Http::timeout(10)
+                ->withoutVerifying()
                 ->acceptJson()
                 ->get('https://api.frankfurter.dev/latest', [
                     'base' => 'USD',
@@ -136,6 +137,7 @@ Route::get('/api/metals/prices', function () {
             $debugLog[] = '🔄 Secondary: GoldPrice.org public data';
             try {
                 $response = \Illuminate\Support\Facades\Http::timeout(10)
+                    ->withoutVerifying()
                     ->acceptJson()
                     ->get('https://data-asg.goldprice.org/dbXRates/USD');
 
