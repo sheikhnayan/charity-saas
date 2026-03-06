@@ -81,11 +81,14 @@ Route::get('/api/metals/prices', function () {
         // Primary source: Frankfurter API (ECB precious metals data via exchange rates)
         // This is the most reliable free API - maintained by major institution, no rate limits
         try {
-            $debugLog[] = '🔄 Primary: Frankfurter API (ECB data) - No key required';
+            $debugLog[] = '🔄 Primary: Frankfurter API (ECB data)';
             
             $response = \Illuminate\Support\Facades\Http::timeout(10)
                 ->withoutVerifying()
-                ->acceptJson()
+                ->withHeaders([
+                    'User-Agent' => 'Calculator/1.0',
+                    'Accept' => 'application/json'
+                ])
                 ->get('https://api.frankfurter.dev/latest', [
                     'base' => 'USD',
                     'symbols' => 'XAU,XAG,XPT,XPD'
@@ -118,7 +121,7 @@ Route::get('/api/metals/prices', function () {
                         if ($price >= $min && $price <= $max) {
                             $normalized[$metal] = round($price, 2);
                             $gotRealData = true;
-                            $debugLog[] = "  ✓ {$metal}: \${$normalized[$metal]}/oz (from Frankfurter/ECB)";
+                            $debugLog[] = "  ✓ {$metal}: \${$normalized[$metal]}/oz (Frankfurter)";
                         } else {
                             $debugLog[] = "  ⚠️  {$metal}: \${$price}/oz outside range [\${$min}-\${$max}]";
                         }
@@ -129,57 +132,43 @@ Route::get('/api/metals/prices', function () {
             }
         } catch (\Throwable $e) {
             $debugLog[] = '❌ Frankfurter Exception: ' . $e->getMessage();
-            \Log::warning('Metals price primary (Frankfurter) failed', ['error' => $e->getMessage()]);
+            \Log::warning('Metals primary (Frankfurter) failed', ['error' => $e->getMessage()]);
         }
 
-        // Secondary source: GoldPrice.org public JSON endpoint (backup)
+        // Tertiary source: Twelve Data free API (powerful alternative)
         if (in_array(null, $normalized, true)) {
-            $debugLog[] = '🔄 Secondary: GoldPrice.org public data';
+            $debugLog[] = '🔄 Tertiary: Twelve Data commodity API';
             try {
-                $response = \Illuminate\Support\Facades\Http::timeout(10)
-                    ->withoutVerifying()
-                    ->acceptJson()
-                    ->get('https://data-asg.goldprice.org/dbXRates/USD');
-
-                $debugLog[] = '📥 GoldPrice.org Response Status: ' . $response->status();
-
-                if ($response->ok()) {
-                    $data = $response->json();
-                    $debugLog[] = '✓ GoldPrice.org returned data';
+                // Twelve Data provides real commodity prices without key on limited free tier
+                $commodities = ['XAU' => 'gold', 'XAG' => 'silver', 'XPT' => 'platinum', 'XPD' => 'palladium'];
+                
+                foreach ($commodities as $code => $metal) {
+                    if ($normalized[$metal] !== null) continue;
                     
-                    if (is_array($data) && count($data) > 0) {
-                        $record = $data[0];
+                    $response = \Illuminate\Support\Facades\Http::timeout(8)
+                        ->withoutVerifying()
+                        ->acceptJson()
+                        ->get('https://api.twelvedata.com/price', [
+                            'symbol' => $code . '/USD',
+                            'apikey' => 'demo'  // Free demo key (limited but works)
+                        ]);
+                    
+                    if ($response->ok()) {
+                        $data = $response->json();
+                        $price = $data['price'] ?? null;
                         
-                        // Map their API fields to our metals
-                        $rateMap = [
-                            'XAU' => 'gold',
-                            'XAG' => 'silver',
-                            'XPT' => 'platinum',
-                            'XPD' => 'palladium',
-                        ];
-
-                        foreach ($rateMap as $code => $metal) {
-                            if ($normalized[$metal] !== null) {
-                                continue;  // Skip if already have this price
-                            }
-                            
-                            $price = $record[$code . 'rate'] ?? null;
+                        if ($price && is_numeric($price)) {
                             list($min, $max) = $priceRanges[$metal];
-                            
-                            if (is_numeric($price) && $price >= $min && $price <= $max) {
+                            if ($price >= $min && $price <= $max) {
                                 $normalized[$metal] = round($price, 2);
                                 $gotRealData = true;
-                                $debugLog[] = "  ✓ {$metal}: \${$normalized[$metal]}/oz (from GoldPrice.org)";
-                            } else {
-                                $debugLog[] = "  ⚠️  {$metal}: \${$price}/oz outside range [\${$min}-\${$max}]";
+                                $debugLog[] = "  ✓ {$metal}: \${$normalized[$metal]}/oz (Twelve Data)";
                             }
                         }
                     }
-                } else {
-                    $debugLog[] = '❌ GoldPrice.org returned status ' . $response->status();
                 }
             } catch (\Throwable $e) {
-                $debugLog[] = '❌ GoldPrice.org Exception: ' . $e->getMessage();
+                $debugLog[] = '⚠️  Twelve Data Exception: ' . $e->getMessage();
             }
         }
         
