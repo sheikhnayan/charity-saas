@@ -123,4 +123,22 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Custom HTML Isolation Settings
+    |--------------------------------------------------------------------------
+    |
+    | These settings control how custom HTML components are rendered in your
+    | page builder. You can choose between iframe isolation (safer, prevents
+    | style/JS leakage) or direct rendering (like Beaver Builder).
+    |
+    | Options:
+    |   'iframe'  - Use iframe isolation (recommended for preview/admin)
+    |   'direct'  - Render HTML directly without isolation
+    |   'auto'    - Auto-detect: iframe in admin, direct on frontend (default)
+    |
+    */
+
+    'custom_html_isolation' => env('CUSTOM_HTML_ISOLATION', 'auto'),
+
 ];

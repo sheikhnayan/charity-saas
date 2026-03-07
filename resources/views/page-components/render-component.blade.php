@@ -1393,6 +1393,25 @@ h5, .ql-header-5 {
                 $height = $component['customHtmlData']['height'] ?? $component['properties']['height'] ?? '300';
                 $iframeId = 'custom-html-' . uniqid();
                 
+                // Determine isolation mode: 'iframe', 'direct', or 'auto'
+                $isolationMode = config('app.custom_html_isolation', 'auto');
+                
+                // Auto-detect: use iframe in admin/preview context, direct on frontend
+                $useIframe = false;
+                if ($isolationMode === 'iframe') {
+                    $useIframe = true;
+                } elseif ($isolationMode === 'direct') {
+                    $useIframe = false;
+                } else { // 'auto'
+                    // Check if we're in admin context
+                    $currentPath = request()->path();
+                    $isAdminContext = str_contains($currentPath, '/admins/') || 
+                                     str_contains($currentPath, '/admin/') ||
+                                     str_contains($currentPath, 'page-builder') ||
+                                     (auth()->check() && auth()->user()->role === 'admin' && request()->has('preview'));
+                    $useIframe = $isAdminContext;
+                }
+                
                 // Inject comprehensive script to handle all link navigation
                 $linkHandlerScript = "<script>
                     // Intercept ALL link clicks and navigate parent window instead
@@ -1446,38 +1465,44 @@ h5, .ql-header-5 {
                     }, true);
                 </script>";
                 
-                // Append the script to the HTML content
+                // Append the script to the HTML content (only for iframe mode)
                 $htmlContentWithScript = $htmlContent . $linkHandlerScript;
             @endphp
             
             <div class="custom-html-component" id="{{ $componentId }}" style="{{ $styleStr }}">
-                <iframe 
-                    id="{{ $iframeId }}"
-                    srcdoc="{!! htmlspecialchars($htmlContentWithScript) !!}" 
-                    style="width: 100%; border: none; display: block; min-height: {{ $height }}px;"
-                    sandbox="allow-scripts allow-same-origin allow-top-navigation allow-popups"
-                    scrolling="no"
-                    loading="lazy"
-                    onload="(function(iframe){
-                        try {
-                            var resizeIframe = function() {
-                                var doc = iframe.contentDocument || iframe.contentWindow.document;
-                                if (doc && doc.body) {
-                                    var height = Math.max(
-                                        doc.body.scrollHeight,
-                                        doc.documentElement.scrollHeight,
-                                        {{ $height }}
-                                    );
-                                    iframe.style.height = height + 'px';
-                                }
-                            };
-                            resizeIframe();
-                            setTimeout(resizeIframe, 100);
-                            setTimeout(resizeIframe, 500);
-                            setTimeout(resizeIframe, 1000);
-                        } catch(e) { console.warn('Auto-resize failed:', e); }
-                    })(this);">
-                </iframe>
+                @if($useIframe)
+                    {{-- IFRAME MODE: Isolated rendering (for preview/admin) --}}
+                    <iframe 
+                        id="{{ $iframeId }}"
+                        srcdoc="{!! htmlspecialchars($htmlContentWithScript) !!}" 
+                        style="width: 100%; border: none; display: block; min-height: {{ $height }}px;"
+                        sandbox="allow-scripts allow-same-origin allow-top-navigation allow-popups"
+                        scrolling="no"
+                        loading="lazy"
+                        onload="(function(iframe){
+                            try {
+                                var resizeIframe = function() {
+                                    var doc = iframe.contentDocument || iframe.contentWindow.document;
+                                    if (doc && doc.body) {
+                                        var height = Math.max(
+                                            doc.body.scrollHeight,
+                                            doc.documentElement.scrollHeight,
+                                            {{ $height }}
+                                        );
+                                        iframe.style.height = height + 'px';
+                                    }
+                                };
+                                resizeIframe();
+                                setTimeout(resizeIframe, 100);
+                                setTimeout(resizeIframe, 500);
+                                setTimeout(resizeIframe, 1000);
+                            } catch(e) { console.warn('Auto-resize failed:', e); }
+                        })(this);">
+                    </iframe>
+                @else
+                    {{-- DIRECT MODE: No isolation (frontend, like Beaver Builder) --}}
+                    {!! $htmlContent !!}
+                @endif
             </div>
         @break
 
