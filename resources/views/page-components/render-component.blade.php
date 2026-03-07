@@ -1451,7 +1451,33 @@ h5, .ql-header-5 {
             @endphp
             
             <div class="custom-html-component" id="{{ $componentId }}" style="{{ $styleStr }}">
-                {!! $htmlContentWithScript !!}
+                <iframe 
+                    id="{{ $iframeId }}"
+                    srcdoc="{!! htmlspecialchars($htmlContentWithScript) !!}" 
+                    style="width: 100%; border: none; display: block; min-height: {{ $height }}px;"
+                    sandbox="allow-scripts allow-same-origin allow-top-navigation allow-popups"
+                    scrolling="no"
+                    loading="lazy"
+                    onload="(function(iframe){
+                        try {
+                            var resizeIframe = function() {
+                                var doc = iframe.contentDocument || iframe.contentWindow.document;
+                                if (doc && doc.body) {
+                                    var height = Math.max(
+                                        doc.body.scrollHeight,
+                                        doc.documentElement.scrollHeight,
+                                        {{ $height }}
+                                    );
+                                    iframe.style.height = height + 'px';
+                                }
+                            };
+                            resizeIframe();
+                            setTimeout(resizeIframe, 100);
+                            setTimeout(resizeIframe, 500);
+                            setTimeout(resizeIframe, 1000);
+                        } catch(e) { console.warn('Auto-resize failed:', e); }
+                    })(this);">
+                </iframe>
             </div>
         @break
 
