@@ -1393,6 +1393,9 @@ h5, .ql-header-5 {
                 $height = $component['customHtmlData']['height'] ?? $component['properties']['height'] ?? '300';
                 $iframeId = 'custom-html-' . uniqid();
                 
+                // Inject base styles for iframe normalization
+                $iframeBaseStyle = "<style>html { font-size: 10px; }</style>";
+                
                 // Inject comprehensive script to handle all link navigation
                 $linkHandlerScript = "<script>
                     // Intercept ALL link clicks and navigate parent window instead
@@ -1446,8 +1449,8 @@ h5, .ql-header-5 {
                     }, true);
                 </script>";
                 
-                // Append the script to the HTML content
-                $htmlContentWithScript = $htmlContent . $linkHandlerScript;
+                // Append base styles and script to the HTML content
+                $htmlContentWithScript = $iframeBaseStyle . $htmlContent . $linkHandlerScript;
             @endphp
             
             <div class="custom-html-component" id="{{ $componentId }}" style="{{ $styleStr }}">
