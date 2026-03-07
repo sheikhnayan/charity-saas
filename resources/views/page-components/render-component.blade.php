@@ -1405,8 +1405,8 @@ h5, .ql-header-5 {
                 } else { // 'auto'
                     // Check if we're in admin context
                     $currentPath = request()->path();
-                    $isAdminContext = str_contains($currentPath, '/admins/') || 
-                                     str_contains($currentPath, '/admin/') ||
+                    $isAdminContext = str_contains($currentPath, 'admins/') || 
+                                     str_contains($currentPath, 'admin/') ||
                                      str_contains($currentPath, 'page-builder') ||
                                      (auth()->check() && auth()->user()->role === 'admin' && request()->has('preview'));
                     $useIframe = $isAdminContext;
@@ -1465,8 +1465,90 @@ h5, .ql-header-5 {
                     }, true);
                 </script>";
                 
-                // Append the script to the HTML content (only for iframe mode)
-                $htmlContentWithScript = $htmlContent . $linkHandlerScript;
+                                $minHeight = max((int) $height, 300);
+
+                                // Full isolated HTML document for iframe mode. This keeps rendering closer to frontend by
+                                // providing a real viewport, consistent root font-size, and parent viewport sync for vh/vw.
+                                $iframeDocument = '<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        :root {
+            font-size: 16px;
+            --host-vh: 1vh;
+            --host-vw: 1vw;
+        }
+        html, body {
+            margin: 0;
+            padding: 0;
+            min-height: 100%;
+        }
+    </style>
+</head>
+<body>
+    ' . $htmlContent . '
+    ' . $linkHandlerScript . '
+    <script>
+        (function() {
+            function notifyParent() {
+                var doc = document.documentElement;
+                var body = document.body;
+                var contentHeight = Math.max(
+                    body ? body.scrollHeight : 0,
+                    doc ? doc.scrollHeight : 0,
+                    body ? body.offsetHeight : 0,
+                    doc ? doc.offsetHeight : 0
+                );
+
+                parent.postMessage({
+                    type: "custom-html:metrics",
+                    iframeId: "' . $iframeId . '",
+                    contentHeight: contentHeight
+                }, "*");
+            }
+
+            function applyViewportVars(payload) {
+                if (!payload) return;
+                if (payload.hostVh) {
+                    document.documentElement.style.setProperty("--host-vh", payload.hostVh + "px");
+                }
+                if (payload.hostVw) {
+                    document.documentElement.style.setProperty("--host-vw", payload.hostVw + "px");
+                }
+                if (payload.rootFontSize) {
+                    document.documentElement.style.fontSize = payload.rootFontSize;
+                }
+            }
+
+            window.addEventListener("message", function(event) {
+                if (!event.data || event.data.type !== "custom-html:host-viewport") return;
+                if (event.data.iframeId !== "' . $iframeId . '") return;
+                applyViewportVars(event.data);
+                notifyParent();
+            });
+
+            var observer = new MutationObserver(notifyParent);
+            if (document.body) {
+                observer.observe(document.body, {
+                    childList: true,
+                    subtree: true,
+                    attributes: true,
+                    characterData: true
+                });
+            }
+
+            window.addEventListener("load", notifyParent);
+            window.addEventListener("resize", notifyParent);
+            setTimeout(notifyParent, 80);
+            setTimeout(notifyParent, 300);
+            setTimeout(notifyParent, 800);
+            setInterval(notifyParent, 1500);
+        })();
+    </script>
+</body>
+</html>';
             @endphp
             
             <div class="custom-html-component" id="{{ $componentId }}" style="{{ $styleStr }}">
@@ -1474,25 +1556,52 @@ h5, .ql-header-5 {
                     {{-- IFRAME MODE: Isolated rendering (for preview/admin) --}}
                     <iframe 
                         id="{{ $iframeId }}"
-                        srcdoc="{!! htmlspecialchars($htmlContentWithScript) !!}" 
-                        style="width: 100%; border: none; display: block; min-height: {{ $height }}px;"
+                                                srcdoc="{!! htmlspecialchars($iframeDocument) !!}" 
+                                                style="width: 100%; border: none; display: block; min-height: {{ $minHeight }}px;"
                         sandbox="allow-scripts allow-same-origin allow-top-navigation allow-popups"
                         scrolling="no"
                         loading="lazy"
-                        onload="(function(iframe){
+                                                onload="(function(iframe){
                             try {
+                                                                var minHeight = {{ $minHeight }};
+
+                                                                var syncHostViewport = function() {
+                                                                        var rootSize = window.getComputedStyle(document.documentElement).fontSize || '16px';
+                                                                        iframe.contentWindow.postMessage({
+                                                                                type: 'custom-html:host-viewport',
+                                                                                iframeId: iframe.id,
+                                                                                hostVh: window.innerHeight * 0.01,
+                                                                                hostVw: window.innerWidth * 0.01,
+                                                                                rootFontSize: rootSize
+                                                                        }, '*');
+                                                                };
+
                                 var resizeIframe = function() {
                                     var doc = iframe.contentDocument || iframe.contentWindow.document;
                                     if (doc && doc.body) {
-                                        var height = Math.max(
+                                                                                var contentHeight = Math.max(
                                             doc.body.scrollHeight,
                                             doc.documentElement.scrollHeight,
-                                            {{ $height }}
+                                                                                        minHeight,
+                                                                                        window.innerHeight
                                         );
-                                        iframe.style.height = height + 'px';
+                                                                                iframe.style.height = contentHeight + 'px';
                                     }
                                 };
+
+                                                                var onMessage = function(event) {
+                                                                        if (!event.data || event.data.type !== 'custom-html:metrics') return;
+                                                                        if (event.data.iframeId !== iframe.id) return;
+
+                                                                        var nextHeight = Math.max(event.data.contentHeight || 0, minHeight, window.innerHeight);
+                                                                        iframe.style.height = nextHeight + 'px';
+                                                                };
+
+                                                                window.addEventListener('message', onMessage);
+                                                                window.addEventListener('resize', syncHostViewport);
+
                                 resizeIframe();
+                                                                syncHostViewport();
                                 setTimeout(resizeIframe, 100);
                                 setTimeout(resizeIframe, 500);
                                 setTimeout(resizeIframe, 1000);
