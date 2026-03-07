@@ -1582,8 +1582,7 @@ h5, .ql-header-5 {
                                                                                 var contentHeight = Math.max(
                                             doc.body.scrollHeight,
                                             doc.documentElement.scrollHeight,
-                                                                                        minHeight,
-                                                                                        window.innerHeight
+                                                                                        minHeight
                                         );
                                                                                 iframe.style.height = contentHeight + 'px';
                                     }
@@ -1593,7 +1592,7 @@ h5, .ql-header-5 {
                                                                         if (!event.data || event.data.type !== 'custom-html:metrics') return;
                                                                         if (event.data.iframeId !== iframe.id) return;
 
-                                                                        var nextHeight = Math.max(event.data.contentHeight || 0, minHeight, window.innerHeight);
+                                                                        var nextHeight = Math.max(event.data.contentHeight || 0, minHeight);
                                                                         iframe.style.height = nextHeight + 'px';
                                                                 };
 
