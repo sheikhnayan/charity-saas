@@ -1451,50 +1451,34 @@ h5, .ql-header-5 {
             @endphp
             
             <div class="custom-html-component" id="{{ $componentId }}" style="{{ $styleStr }}">
-                <iframe 
+                /* <iframe 
                     id="{{ $iframeId }}"
                     srcdoc="{!! htmlspecialchars($htmlContentWithScript) !!}" 
-                    style="width: 100%; border: none; display: block; height: 600px; min-height: {{ $height }}px;"
+                    style="width: 100%; border: none; display: block; min-height: {{ $height }}px;"
                     sandbox="allow-scripts allow-same-origin allow-top-navigation allow-popups"
                     scrolling="no"
                     loading="lazy"
                     onload="(function(iframe){
                         try {
-                            var minHeight = {{ $height }};
-                            
-                            // Set initial constrained height so vh units calculate reasonably
-                            iframe.style.height = '600px';
-                            
                             var resizeIframe = function() {
                                 var doc = iframe.contentDocument || iframe.contentWindow.document;
                                 if (doc && doc.body) {
-                                    // Force reflow with constrained viewport
-                                    void(doc.body.offsetHeight);
-                                    
-                                    var contentHeight = minHeight;
-                                    
-                                    // Measure actual scrollable content height (ignores min-height constraints)
-                                    if (doc.body.firstElementChild) {
-                                        var rect = doc.body.firstElementChild.getBoundingClientRect();
-                                        contentHeight = Math.max(contentHeight, Math.ceil(rect.height));
-                                    }
-                                    
-                                    // Also check scrollHeight as fallback
-                                    contentHeight = Math.max(contentHeight, doc.body.scrollHeight, doc.documentElement.scrollHeight);
-                                    
-                                    iframe.style.height = contentHeight + 'px';
+                                    var height = Math.max(
+                                        doc.body.scrollHeight,
+                                        doc.documentElement.scrollHeight,
+                                        {{ $height }}
+                                    );
+                                    iframe.style.height = height + 'px';
                                 }
                             };
-                            
-                            // Multiple measurements as content may load/animate
-                            setTimeout(resizeIframe, 50);
-                            setTimeout(resizeIframe, 200);
+                            resizeIframe();
+                            setTimeout(resizeIframe, 100);
                             setTimeout(resizeIframe, 500);
                             setTimeout(resizeIframe, 1000);
-                            setTimeout(resizeIframe, 1500);
                         } catch(e) { console.warn('Auto-resize failed:', e); }
                     })(this);">
-                </iframe>
+                </iframe> */
+                {!! htmlspecialchars($htmlContentWithScript) !!}
             </div>
         @break
 
