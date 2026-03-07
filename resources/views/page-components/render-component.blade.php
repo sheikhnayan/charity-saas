@@ -1460,21 +1460,30 @@ h5, .ql-header-5 {
                     loading="lazy"
                     onload="(function(iframe){
                         try {
+                            var minHeight = {{ $height }};
                             var resizeIframe = function() {
                                 var doc = iframe.contentDocument || iframe.contentWindow.document;
                                 if (doc && doc.body) {
-                                    var height = Math.max(
-                                        doc.body.scrollHeight,
-                                        doc.documentElement.scrollHeight,
-                                        {{ $height }}
-                                    );
-                                    iframe.style.height = height + 'px';
+                                    var contentHeight = minHeight;
+                                    
+                                    // Measure actual rendered height using getBoundingClientRect (ignores vh/vw inflation)
+                                    if (doc.body.firstElementChild) {
+                                        var rect = doc.body.firstElementChild.getBoundingClientRect();
+                                        contentHeight = Math.max(contentHeight, Math.ceil(rect.height));
+                                    }
+                                    
+                                    // Fallback to body measurements
+                                    var bodyRect = doc.body.getBoundingClientRect();
+                                    contentHeight = Math.max(contentHeight, Math.ceil(bodyRect.height));
+                                    
+                                    iframe.style.height = contentHeight + 'px';
                                 }
                             };
                             resizeIframe();
                             setTimeout(resizeIframe, 100);
                             setTimeout(resizeIframe, 500);
                             setTimeout(resizeIframe, 1000);
+                            setTimeout(resizeIframe, 1500);
                         } catch(e) { console.warn('Auto-resize failed:', e); }
                     })(this);">
                 </iframe>
