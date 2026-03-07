@@ -106,6 +106,12 @@
 <style>
 {!! $responsiveCSS !!}
 
+/* Custom HTML iframe wrapper - no constraints */
+.component-wrapper .custom-html-component {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
 .ticket-mask {
         --mask: conic-gradient(from 45deg at left,#0000,#000 1deg 89deg,#0000 90deg) left/51% 16.00px repeat-y,conic-gradient(from -135deg at right,#0000,#000 1deg 89deg,#0000 90deg) 100% calc(50% + 8px)/51% 16.00px repeat-y;
         -webkit-mask: var(--mask);
@@ -501,6 +507,12 @@ h5, .ql-header-5 {
 @else
 {{-- Include Quill.js styles even when no responsive CSS --}}
 <style>
+/* Custom HTML iframe wrapper - no constraints */
+.component-wrapper .custom-html-component {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
 /* Quill.js Class-based Font Styles for Frontend */
 .ql-size-6px { font-size: 6px !important; }
 .ql-size-8px { font-size: 8px !important; }
@@ -1390,95 +1402,97 @@ h5, .ql-header-5 {
         @case('custom-html')
             @php
                 $htmlContent = $component['customHtmlData']['htmlContent'] ?? $component['properties']['htmlContent'] ?? '<div style="padding: 20px; text-align: center;"><h3>Custom HTML Content</h3><p>Add your custom HTML code in the page builder</p></div>';
-                $height = $component['customHtmlData']['height'] ?? $component['properties']['height'] ?? '300';
                 $iframeId = 'custom-html-' . uniqid();
                 
-                // Inject comprehensive script to handle all link navigation
-                $linkHandlerScript = "<script>
-                    // Intercept ALL link clicks and navigate parent window instead
-                    document.addEventListener('click', function(e) {
-                        var target = e.target.closest('a[href]');
-                        if (!target) return;
-                        
-                        var href = target.getAttribute('href');
-                        if (!href || href === '#') return;
-                        
-                        // Check if it's an internal link (starts with / or is same domain)
-                        var isInternal = href.startsWith('/') || 
-                                       href.startsWith('./') || 
-                                       href.startsWith('../') ||
-                                       href.includes(window.location.hostname) ||
-                                       !href.includes('://');
-                        
-                        if (isInternal) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            // Navigate the parent/top window
-                            try {
-                                window.top.location.href = href;
-                            } catch(e2) {
-                                try {
-                                    window.parent.location.href = href;
-                                } catch(e3) {
-                                    // Fallback: open in new window if parent navigation fails
-                                    window.open(href, '_blank');
-                                }
-                            }
-                        }
-                    }, true);
-                    
-                    // Also handle form submissions to internal pages
-                    document.addEventListener('submit', function(e) {
-                        var form = e.target;
-                        var action = form.getAttribute('action');
-                        if (action && !action.includes('://')) {
-                            e.preventDefault();
-                            try {
-                                window.top.location.href = action;
-                            } catch(e2) {
-                                try {
-                                    window.parent.location.href = action;
-                                } catch(e3) {
-                                    // Fallback
-                                }
-                            }
-                        }
-                    }, true);
-                </script>";
-                
-                // Append the script to the HTML content
-                $htmlContentWithScript = $htmlContent . $linkHandlerScript;
+                // Create a complete HTML document for isolation (like Beaver Builder does)
+                $isolatedDocument = '<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { 
+            margin: 0 !important; 
+            padding: 0 !important; 
+            overflow-x: hidden;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+' . $htmlContent . '
+<script>
+    // Auto-resize iframe to content height
+    function notifyHeight() {
+        const height = Math.max(
+            document.body.scrollHeight,
+            document.body.offsetHeight,
+            document.documentElement.clientHeight,
+            document.documentElement.scrollHeight,
+            document.documentElement.offsetHeight
+        );
+        window.parent.postMessage({
+            type: "iframe-resize",
+            iframeId: "' . $iframeId . '",
+            height: height
+        }, "*");
+    }
+    
+    // Initial resize
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", notifyHeight);
+    } else {
+        notifyHeight();
+    }
+    
+    // Resize on window resize and after images load
+    window.addEventListener("resize", notifyHeight);
+    window.addEventListener("load", notifyHeight);
+    
+    // Observe DOM changes for dynamic content
+    const observer = new MutationObserver(notifyHeight);
+    observer.observe(document.body, { 
+        childList: true, 
+        subtree: true, 
+        attributes: true 
+    });
+    
+    // Check periodically for the first few seconds (for animations/delays)
+    let checks = 0;
+    const checkInterval = setInterval(() => {
+        notifyHeight();
+        checks++;
+        if (checks > 10) clearInterval(checkInterval);
+    }, 300);
+</script>
+</body>
+</html>';
             @endphp
             
-            <div class="custom-html-component" id="{{ $componentId }}" style="{{ $styleStr }}">
+            <div class="custom-html-component" id="{{ $componentId }}" style="{{ $styleStr }} padding: 0 !important; margin: 0 !important; max-width: 100% !important; width: 100% !important;">
                 <iframe 
                     id="{{ $iframeId }}"
-                    srcdoc="{!! htmlspecialchars($htmlContentWithScript) !!}" 
-                    style="width: 100%; border: none; display: block; min-height: {{ $height }}px;"
-                    sandbox="allow-scripts allow-same-origin allow-top-navigation allow-popups"
+                    srcdoc="{{ htmlspecialchars($isolatedDocument) }}"
+                    style="width: 100%; height: 600px; border: none; display: block; overflow: hidden;"
                     scrolling="no"
-                    loading="lazy"
-                    onload="(function(iframe){
-                        try {
-                            var resizeIframe = function() {
-                                var doc = iframe.contentDocument || iframe.contentWindow.document;
-                                if (doc && doc.body) {
-                                    var height = Math.max(
-                                        doc.body.scrollHeight,
-                                        doc.documentElement.scrollHeight,
-                                        {{ $height }}
-                                    );
-                                    iframe.style.height = height + 'px';
-                                }
-                            };
-                            resizeIframe();
-                            setTimeout(resizeIframe, 100);
-                            setTimeout(resizeIframe, 500);
-                            setTimeout(resizeIframe, 1000);
-                        } catch(e) { console.warn('Auto-resize failed:', e); }
-                    })(this);">
-                </iframe>
+                    frameborder="0"
+                ></iframe>
             </div>
+            
+            <script>
+                // Listen for resize messages from iframe
+                (function() {
+                    window.addEventListener('message', function(e) {
+                        if (e.data.type === 'iframe-resize' && e.data.iframeId === '{{ $iframeId }}') {
+                            const iframe = document.getElementById('{{ $iframeId }}');
+                            if (iframe && e.data.height) {
+                                iframe.style.height = e.data.height + 'px';
+                            }
+                        }
+                    });
+                })();
+            </script>
         @break
 
         @case('text')
