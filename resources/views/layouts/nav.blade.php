@@ -56,6 +56,12 @@
         .navbar-expand-xl .navbar-collapse.collapse {
             display: flex !important;
         }
+
+        /* Show first-level dropdowns on hover for desktop */
+        .navbar-nav .dropdown:hover > .dropdown-menu,
+        .navbar-nav .dropdown.show > .dropdown-menu {
+            display: block;
+        }
     }
     
     /* Dropdown Menu Styling with Dynamic Colors */
@@ -166,11 +172,12 @@
                                     {{-- Dropdown Menu --}}
                                     <li class="nav-item dropdown">
                                         <a class="nav-link dropdown-toggle {{ $menuItem->css_classes }}" 
-                                           href="#" 
+                                           href="{{ $menuItem->url ?: '#' }}" 
                                            id="navbarDropdown{{ $menuItem->id }}" 
                                            role="button" 
                                            data-bs-toggle="dropdown" 
                                            aria-expanded="false"
+                                           target="{{ $menuItem->target }}"
                                            style="color:{{ $header->color }} !important;">
                                             {{ $menuItem->title }}
                                         </a>
@@ -340,6 +347,7 @@
             text-decoration: underline;
         }
     </style>
+    @endif
 
 
 <script>
@@ -348,7 +356,63 @@
         $('#navbarNav').removeClass('show');
     })
 </script>
-    @endif
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const desktopMq = window.matchMedia('(min-width: 1200px)');
+        const dropdownItems = document.querySelectorAll('.navbar-nav .nav-item.dropdown');
+
+        const bindDesktopHover = () => {
+            dropdownItems.forEach((item) => {
+                const toggle = item.querySelector('.dropdown-toggle');
+                if (!toggle) return;
+
+                const href = (toggle.getAttribute('href') || '').trim();
+                const hasRealUrl = href !== '' && href !== '#';
+
+                // Parent links with submenu should still navigate on desktop click.
+                if (!toggle.dataset.desktopLinkBound) {
+                    toggle.addEventListener('click', function (e) {
+                        if (desktopMq.matches && hasRealUrl) {
+                            e.preventDefault();
+                            window.location.href = href;
+                        }
+                    });
+                    toggle.dataset.desktopLinkBound = '1';
+                }
+
+                // Hover interaction for desktop dropdown visibility.
+                if (!item.dataset.desktopHoverBound) {
+                    item.addEventListener('mouseenter', function () {
+                        if (!desktopMq.matches) return;
+                        item.classList.add('show');
+                        toggle.classList.add('show');
+                        toggle.setAttribute('aria-expanded', 'true');
+                        const menu = item.querySelector('.dropdown-menu');
+                        if (menu) {
+                            menu.classList.add('show');
+                        }
+                    });
+
+                    item.addEventListener('mouseleave', function () {
+                        if (!desktopMq.matches) return;
+                        item.classList.remove('show');
+                        toggle.classList.remove('show');
+                        toggle.setAttribute('aria-expanded', 'false');
+                        const menu = item.querySelector('.dropdown-menu');
+                        if (menu) {
+                            menu.classList.remove('show');
+                        }
+                    });
+
+                    item.dataset.desktopHoverBound = '1';
+                }
+            });
+        };
+
+        bindDesktopHover();
+    });
+</script>
 
     {{-- Auth Modal Styles - Exact copy from product.blade.php --}}
     <style>
