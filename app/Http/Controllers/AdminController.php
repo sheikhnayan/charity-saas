@@ -336,6 +336,12 @@ class AdminController extends Controller
         if ($request->has('menu_font_family')) {
             $data->menu_font_family = $request->menu_font_family;
         }
+        if ($request->has('menu_font_size')) {
+            $data->menu_font_size = $request->menu_font_size;
+        }
+        if ($request->has('submenu_background_color')) {
+            $data->submenu_background_color = $request->submenu_background_color;
+        }
         if ($request->has('contact_topbar_font_family')) {
             $data->contact_topbar_font_family = $request->contact_topbar_font_family;
         }

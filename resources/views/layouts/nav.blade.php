@@ -24,6 +24,12 @@
         }
     }
 </script>
+@php
+    $menuFontSize = is_numeric($header->menu_font_size ?? null) ? (int) $header->menu_font_size : null;
+    $submenuBackgroundRaw = trim((string) ($header->submenu_background_color ?? ''));
+    $submenuIsTransparent = strtolower($submenuBackgroundRaw) === 'transparent';
+    $submenuBackground = $submenuBackgroundRaw !== '' ? $submenuBackgroundRaw : ($header->background ?? '#ffffff');
+@endphp
 <style>
     /* Fix Tailwind-Bootstrap conflicts - Tailwind's 'collapse' utility interferes with Bootstrap's collapse component */
     .navbar-collapse,
@@ -65,11 +71,20 @@
     }
     
     /* Dropdown Menu Styling with Dynamic Colors */
+    .navbar-nav .nav-link {
+        @if(isset($header) && $header && $header->menu_font_family)
+        font-family: '{{ $header->menu_font_family }}', sans-serif !important;
+        @endif
+        @if($menuFontSize)
+        font-size: {{ $menuFontSize }}px !important;
+        @endif
+    }
+
     .navbar-nav .dropdown-menu {
-        background-color: {{ $header->background ?? '#ffffff' }} !important;
-        border: 1px solid rgba(0,0,0,0.1);
+        background-color: {{ $submenuBackground }} !important;
+        border: {{ $submenuIsTransparent ? 'none' : '1px solid rgba(0,0,0,0.1)' }};
         border-radius: 4px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        box-shadow: {{ $submenuIsTransparent ? 'none' : '0 4px 6px rgba(0,0,0,0.1)' }};
         margin-top: 0;
         padding: 0.5rem 0;
     }
@@ -80,6 +95,9 @@
         transition: all 0.3s ease;
         @if(isset($header) && $header && $header->menu_font_family)
         font-family: '{{ $header->menu_font_family }}', sans-serif !important;
+        @endif
+        @if($menuFontSize)
+        font-size: {{ $menuFontSize }}px !important;
         @endif
     }
     

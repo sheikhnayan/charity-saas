@@ -167,6 +167,87 @@
                                         @endif
                                     </select>
                                 </div>
+
+                                <div class="col-md-6 col-lg-4">
+                                    <label for="menu_font_size" class="form-label text-capitalize">
+                                        Menu Font Size (px)
+                                    </label>
+                                    <i role="button" class="fa-solid fa-circle-info text-info btn-modal-info"
+                                        data-title="Menu Font Size"
+                                        data-description="Set the font size for menu and submenu items."></i>
+                                    <input type="number" class="form-control" id="menu_font_size" name="menu_font_size"
+                                           value="{{ $data->menu_font_size ?? 16 }}" min="8" max="60" step="1"
+                                           placeholder="16">
+                                    <small class="text-muted">Applied in pixels to main menu and dropdown links.</small>
+                                </div>
+
+                                <div class="col-md-6 col-lg-4">
+                                    <label for="submenu_background_color" class="form-label text-capitalize">
+                                        Submenu Background Color
+                                    </label>
+                                    <i role="button" class="fa-solid fa-circle-info text-info btn-modal-info"
+                                        data-title="Submenu Background Color"
+                                        data-description="Set background color for dropdown menus. Enable Transparent to remove submenu background."></i>
+                                    <div class="input-group mb-2">
+                                        <input type="color" class="form-control form-control-color" id="submenu_background_color_picker"
+                                               value="{{ (isset($data->submenu_background_color) && $data->submenu_background_color && strtolower($data->submenu_background_color) !== 'transparent') ? $data->submenu_background_color : '#ffffff' }}"
+                                               title="Choose submenu background color" style="max-width: 3rem;">
+                                        <input type="text" class="form-control" id="submenu_background_color" name="submenu_background_color"
+                                               value="{{ $data->submenu_background_color ?? '#ffffff' }}"
+                                               placeholder="#ffffff or transparent">
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="submenu_background_transparent"
+                                               {{ (isset($data->submenu_background_color) && strtolower($data->submenu_background_color) === 'transparent') ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="submenu_background_transparent">
+                                            Transparent
+                                        </label>
+                                    </div>
+                                    <script>
+                                        document.addEventListener('DOMContentLoaded', function() {
+                                            const colorInput = document.getElementById('submenu_background_color_picker');
+                                            const textInput = document.getElementById('submenu_background_color');
+                                            const transparentCheckbox = document.getElementById('submenu_background_transparent');
+
+                                            const syncTransparentState = () => {
+                                                const isTransparent = transparentCheckbox.checked;
+                                                if (isTransparent) {
+                                                    textInput.value = 'transparent';
+                                                    colorInput.disabled = true;
+                                                } else {
+                                                    if ((textInput.value || '').trim().toLowerCase() === 'transparent') {
+                                                        textInput.value = colorInput.value || '#ffffff';
+                                                    }
+                                                    colorInput.disabled = false;
+                                                }
+                                            };
+
+                                            colorInput.addEventListener('input', function() {
+                                                if (!transparentCheckbox.checked) {
+                                                    textInput.value = colorInput.value;
+                                                }
+                                            });
+
+                                            textInput.addEventListener('input', function() {
+                                                const val = (textInput.value || '').trim().toLowerCase();
+                                                if (val === 'transparent') {
+                                                    transparentCheckbox.checked = true;
+                                                    syncTransparentState();
+                                                    return;
+                                                }
+
+                                                if (/^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/.test(textInput.value.trim())) {
+                                                    colorInput.value = textInput.value.trim();
+                                                    transparentCheckbox.checked = false;
+                                                    syncTransparentState();
+                                                }
+                                            });
+
+                                            transparentCheckbox.addEventListener('change', syncTransparentState);
+                                            syncTransparentState();
+                                        });
+                                    </script>
+                                </div>
                                 
                                 <div class="col-md-6 col-lg-4">
                                     <label for="contact_topbar_font_family" class="form-label text-capitalize">

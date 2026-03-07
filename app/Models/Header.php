@@ -33,6 +33,8 @@ class Header extends Model
         'invest_now_button_text',
         'header_font_family',
         'menu_font_family',
+        'menu_font_size',
+        'submenu_background_color',
         'contact_topbar_font_family',
         'investor_exclusives_font_family',
         'show_auth_button',
