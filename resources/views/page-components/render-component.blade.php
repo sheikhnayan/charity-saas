@@ -1451,7 +1451,7 @@ h5, .ql-header-5 {
             @endphp
             
             <div class="custom-html-component" id="{{ $componentId }}" style="{{ $styleStr }}">
-                {!! htmlspecialchars($htmlContentWithScript) !!}
+                {!! $htmlContentWithScript !!}
             </div>
         @break
 
