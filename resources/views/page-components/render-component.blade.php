@@ -1457,7 +1457,7 @@ h5, .ql-header-5 {
                 <iframe 
                     id="{{ $iframeId }}"
                     srcdoc="{!! htmlspecialchars($htmlContentWithScript) !!}" 
-                    style="width: 100%; border: none; display: block; min-height: {{ $height }}px;"
+                    style="width: 100%; border: none; display: block;"
                     sandbox="allow-scripts allow-same-origin allow-top-navigation allow-popups"
                     scrolling="no"
                     loading="lazy"
