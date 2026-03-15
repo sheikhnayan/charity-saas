@@ -1463,21 +1463,99 @@ h5, .ql-header-5 {
                     loading="lazy"
                     onload="(function(iframe){
                         try {
+                            var resizeFrameId = null;
                             var resizeIframe = function() {
                                 var doc = iframe.contentDocument || iframe.contentWindow.document;
                                 if (doc && doc.body) {
-                                    var height = Math.max(
+                                    var bodyHeight = Math.max(
                                         doc.body.scrollHeight,
-                                        doc.documentElement.scrollHeight,
-                                        {{ $height }}
+                                        doc.body.offsetHeight,
+                                        doc.body.getBoundingClientRect ? Math.ceil(doc.body.getBoundingClientRect().height) : 0
                                     );
-                                    iframe.style.height = height + 'px';
+
+                                    var documentHeight = 0;
+                                    if (doc.documentElement) {
+                                        documentHeight = Math.max(
+                                            doc.documentElement.scrollHeight,
+                                            doc.documentElement.offsetHeight,
+                                            doc.documentElement.getBoundingClientRect ? Math.ceil(doc.documentElement.getBoundingClientRect().height) : 0
+                                        );
+                                    }
+
+                                    var measuredHeight = bodyHeight > 0 ? bodyHeight : documentHeight;
+                                    var fallbackHeight = parseInt('{{ $height }}', 10) || 0;
+                                    var height = measuredHeight > 0 ? measuredHeight : fallbackHeight;
+                                    if (height <= 0) {
+                                        height = 1;
+                                    }
+
+                                    var currentHeight = parseInt(iframe.style.height, 10) || 0;
+                                    if (Math.abs(currentHeight - height) > 1) {
+                                        iframe.style.height = height + 'px';
+                                    }
                                 }
                             };
+
+                            var scheduleResize = function() {
+                                if (resizeFrameId) {
+                                    cancelAnimationFrame(resizeFrameId);
+                                }
+
+                                resizeFrameId = requestAnimationFrame(function() {
+                                    resizeFrameId = null;
+                                    resizeIframe();
+                                });
+                            };
+
+                            var setupObservers = function() {
+                                var doc = iframe.contentDocument || iframe.contentWindow.document;
+                                if (!doc || !doc.body) {
+                                    return;
+                                }
+
+                                if (typeof ResizeObserver !== 'undefined') {
+                                    var resizeObserver = new ResizeObserver(function() {
+                                        scheduleResize();
+                                    });
+
+                                    resizeObserver.observe(doc.body);
+                                    if (doc.documentElement) {
+                                        resizeObserver.observe(doc.documentElement);
+                                    }
+                                }
+
+                                if (typeof MutationObserver !== 'undefined') {
+                                    var mutationObserver = new MutationObserver(function() {
+                                        scheduleResize();
+                                    });
+
+                                    mutationObserver.observe(doc.body, {
+                                        childList: true,
+                                        subtree: true,
+                                        attributes: true,
+                                        characterData: true
+                                    });
+                                }
+
+                                if (iframe.contentWindow) {
+                                    iframe.contentWindow.addEventListener('resize', scheduleResize);
+                                    iframe.contentWindow.addEventListener('load', scheduleResize);
+                                }
+
+                                var media = doc.querySelectorAll('img, video, iframe, embed, object');
+                                media.forEach(function(node) {
+                                    node.addEventListener('load', scheduleResize);
+                                    node.addEventListener('error', scheduleResize);
+                                });
+                            };
+
                             resizeIframe();
-                            setTimeout(resizeIframe, 100);
-                            setTimeout(resizeIframe, 500);
-                            setTimeout(resizeIframe, 1000);
+                            setupObservers();
+                            setTimeout(scheduleResize, 100);
+                            setTimeout(scheduleResize, 500);
+                            setTimeout(scheduleResize, 1000);
+                            setTimeout(scheduleResize, 1500);
+                            setTimeout(scheduleResize, 2500);
                         } catch(e) { console.warn('Auto-resize failed:', e); }
                     })(this);">
                 </iframe>

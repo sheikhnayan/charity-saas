@@ -39,7 +39,14 @@ class Footer extends Model
         'contact_heading_size',
         'contact_email_color',
         'contact_email_font',
-        'contact_email_size'
+        'contact_email_size',
+        'builder_state',
+        'use_builder'
+    ];
+
+    protected $casts = [
+        'builder_state' => 'array',
+        'use_builder' => 'boolean',
     ];
 
     /**

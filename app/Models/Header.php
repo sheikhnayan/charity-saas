@@ -40,7 +40,14 @@ class Header extends Model
         'show_auth_button',
         'auth_button_text',
         'auth_button_bg_color',
-        'auth_button_text_color'
+        'auth_button_text_color',
+        'builder_state',
+        'use_builder'
+    ];
+
+    protected $casts = [
+        'builder_state' => 'array',
+        'use_builder' => 'boolean',
     ];
 
     public function setting()

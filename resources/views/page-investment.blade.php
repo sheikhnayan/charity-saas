@@ -1534,11 +1534,54 @@ if (isset($state['components'])) {
         
         $header = \App\Models\Header::where('website_id', $check->id)->first();
         $footer = \App\Models\Footer::where('website_id', $check->id)->first();
+
+        $headerBuilderState = null;
+        $footerBuilderState = null;
+        $headerBuilderComponents = [];
+        $footerBuilderComponents = [];
+
+        if ($header && $header->use_builder && !empty($header->builder_state)) {
+            $headerBuilderState = is_array($header->builder_state)
+                ? $header->builder_state
+                : json_decode($header->builder_state, true);
+
+            if (is_array($headerBuilderState)) {
+                $headerBuilderComponents = isset($headerBuilderState['components']) && is_array($headerBuilderState['components'])
+                    ? $headerBuilderState['components']
+                    : (array_is_list($headerBuilderState) ? $headerBuilderState : []);
+            }
+        }
+
+        if ($footer && $footer->use_builder && !empty($footer->builder_state)) {
+            $footerBuilderState = is_array($footer->builder_state)
+                ? $footer->builder_state
+                : json_decode($footer->builder_state, true);
+
+            if (is_array($footerBuilderState)) {
+                $footerBuilderComponents = isset($footerBuilderState['components']) && is_array($footerBuilderState['components'])
+                    ? $footerBuilderState['components']
+                    : (array_is_list($footerBuilderState) ? $footerBuilderState : []);
+            }
+        }
+
+        // Strict mode: once use_builder is enabled, never fall back to legacy blocks.
+        $useHeaderBuilder = (bool) ($header && $header->use_builder);
+        $useFooterBuilder = (bool) ($footer && $footer->use_builder);
         @endphp
     <div data-hotjar-tracker data-website-id="{{ $check->id }}"></div>
     <script src="{{ asset('js/hotjar-tracker.js') }}"></script>
     
-    @if ($header && $header->status == 1)
+    @if ($useHeaderBuilder)
+        @include('builders.render-header-builder', [
+            'headerBuilderState' => $headerBuilderState,
+            'headerBuilderComponents' => $headerBuilderComponents,
+            'header' => $header,
+            'footer' => $footer,
+            'check' => $check,
+            'data' => $data,
+            'menuSections' => $menuSections ?? [],
+        ])
+    @elseif ($header && $header->status == 1)
         {{-- Contact Information Top Bar --}}
         @if($header && $header->show_contact_topbar)
             <div class="contact-topbar" style="background: {{ $header->contact_topbar_bg_color ?? '#000000' }}; padding: 8px 0; font-size: 14px; height: 35px;">
@@ -1808,8 +1851,17 @@ if (isset($state['components'])) {
     @include('layouts.main_footer')
     
 @else
-    {{-- Use the new dynamic footer for all website types --}}
-    @if ($footer && $footer->status == 1)
+    @if ($useFooterBuilder)
+        @include('builders.render-footer-builder', [
+            'footerBuilderState' => $footerBuilderState,
+            'footerBuilderComponents' => $footerBuilderComponents,
+            'header' => $header,
+            'footer' => $footer,
+            'check' => $check,
+            'data' => $data,
+            'menuSections' => $menuSections ?? [],
+        ])
+    @elseif ($footer && $footer->status == 1)
         @include('layouts.new-footer')
     @endif
 @endif

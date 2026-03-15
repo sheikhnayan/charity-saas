@@ -2772,11 +2772,11 @@ button a:hover {
     <div class="sidebar">
         <div class="sidebar-header">
             <button class="back-btn">
-                <a href="/admins/page">
+                <a href="{{ $builderBackUrl ?? '/admins/page' }}">
                     <i class="bi bi-arrow-left"></i> Back
                 </a>
             </button>
-            <h2><i class="bi bi-tools"></i> Page Builder</h2>
+            <h2><i class="bi bi-tools"></i> {{ $builderTitle ?? 'Page Builder' }}</h2>
         </div>
         
         <div class="sidebar-content">
@@ -2797,9 +2797,10 @@ button a:hover {
             </button>
             
             <button class="save-btn" onclick="saveBuilderState()">
-                <i class="bi bi-check-circle"></i> Save Page
+                <i class="bi bi-check-circle"></i> {{ $builderSaveLabel ?? 'Save Page' }}
             </button>
-            
+
+            @if(!isset($showTemplateActions) || $showTemplateActions)
             <button class="save-btn" onclick="showSaveAsTemplateModal()" style="background: #28a745; margin-left: 10px;">
                 <i class="bi bi-file-earmark-plus"></i> Save as Template
             </button>
@@ -2811,6 +2812,7 @@ button a:hover {
             <button class="save-btn" onclick="showInsertSectionTemplateModal()" style="background: #6f42c1; margin-left: 10px;">
                 <i class="bi bi-folder-symlink"></i> Insert Section
             </button>
+            @endif
 
             <div id="componentsTab" class="tab-section">
                 <h3><i class="bi bi-collection"></i> Components</h3>
@@ -2819,6 +2821,38 @@ button a:hover {
                 </div>
                 <div class="component-list">
                 <div class="component-item" draggable="true" data-type="inner-section"><i class="fas fa-layer-group me-2"></i>Inner Section</div>
+                @if(($builderMode ?? null) === 'header')
+                <div class="component-item" draggable="true" data-type="header-contact-topbar"><i class="fas fa-address-card me-2"></i>Header Contact Topbar</div>
+                <div class="component-item" draggable="true" data-type="header-nav"><i class="fas fa-bars me-2"></i>Header Navigation</div>
+                <div class="component-item" draggable="true" data-type="header-investor-bar"><i class="fas fa-bullhorn me-2"></i>Header Investor Bar</div>
+                <div class="component-item" draggable="true" data-type="header-logo"><i class="fas fa-image me-2"></i>Header Logo</div>
+                <div class="component-item" draggable="true" data-type="header-menu-links"><i class="fas fa-list me-2"></i>Header Menu Links</div>
+                <div class="component-item" draggable="true" data-type="header-auth-button"><i class="fas fa-user-circle me-2"></i>Header Login/Dashboard</div>
+                <div class="component-item" draggable="true" data-type="header-invest-button"><i class="fas fa-coins me-2"></i>Header Invest Button</div>
+                <div class="component-item" draggable="true" data-type="text"><i class="fas fa-font me-2"></i>Text Editor</div>
+                <div class="component-item" draggable="true" data-type="image"><i class="fas fa-image me-2"></i>Image</div>
+                <div class="component-item" draggable="true" data-type="button"><i class="fas fa-square me-2"></i>Button</div>
+                <div class="component-item" draggable="true" data-type="divider"><i class="fas fa-minus me-2"></i>Divider</div>
+                <div class="component-item" draggable="true" data-type="section-title"><i class="fas fa-heading me-2"></i>Section Title</div>
+                <div class="component-item" draggable="true" data-type="custom-html"><i class="fas fa-code me-2"></i>Custom HTML / Code</div>
+                @endif
+                @if(($builderMode ?? null) === 'footer')
+                <div class="component-item" draggable="true" data-type="footer-legacy-main"><i class="fas fa-shoe-prints me-2"></i>Footer Main Block</div>
+                <div class="component-item" draggable="true" data-type="footer-logo"><i class="fas fa-image me-2"></i>Footer Logo</div>
+                <div class="component-item" draggable="true" data-type="footer-description"><i class="fas fa-align-left me-2"></i>Footer Description</div>
+                <div class="component-item" draggable="true" data-type="footer-social-links"><i class="fas fa-share-alt me-2"></i>Footer Social Links</div>
+                <div class="component-item" draggable="true" data-type="footer-contact-block"><i class="fas fa-envelope me-2"></i>Footer Contact Block</div>
+                <div class="component-item" draggable="true" data-type="footer-policy-links"><i class="fas fa-gavel me-2"></i>Footer Policy Links</div>
+                <div class="component-item" draggable="true" data-type="footer-disclaimer"><i class="fas fa-file-alt me-2"></i>Footer Disclaimer</div>
+                <div class="component-item" draggable="true" data-type="footer-investment-disclaimer"><i class="fas fa-exclamation-triangle me-2"></i>Investment Disclaimer</div>
+                <div class="component-item" draggable="true" data-type="footer-background-images"><i class="fas fa-images me-2"></i>Footer Background Images</div>
+                <div class="component-item" draggable="true" data-type="text"><i class="fas fa-font me-2"></i>Text Editor</div>
+                <div class="component-item" draggable="true" data-type="image"><i class="fas fa-image me-2"></i>Image</div>
+                <div class="component-item" draggable="true" data-type="button"><i class="fas fa-square me-2"></i>Button</div>
+                <div class="component-item" draggable="true" data-type="divider"><i class="fas fa-minus me-2"></i>Divider</div>
+                <div class="component-item" draggable="true" data-type="section-title"><i class="fas fa-heading me-2"></i>Section Title</div>
+                <div class="component-item" draggable="true" data-type="custom-html"><i class="fas fa-code me-2"></i>Custom HTML / Code</div>
+                @endif
                 <div class="component-item" draggable="true" data-type="text-images"><i class="fas fa-align-left me-2"></i>Text & Images</div>
                 <div class="component-item" draggable="true" data-type="feature-grid"><i class="fas fa-th-large me-2"></i>Feature Grid</div>
                 <div class="component-item" draggable="true" data-type="investment-tier"><i class="fas fa-coins me-2"></i>Investment Tier</div>
@@ -4050,8 +4084,25 @@ button a:hover {
 
     // Pass website ID to JavaScript for AJAX calls
     window.currentWebsiteId = {{ $data->website_id ?? 1 }};
+    window.builderMode = @json($builderMode ?? 'page');
+    window.builderLoadUrl = @json($builderLoadUrl ?? null);
+    window.builderSaveUrl = @json($builderSaveUrl ?? null);
+    window.allowedComponentTypes = @json($allowedComponentTypes ?? null);
+
+    if (Array.isArray(window.allowedComponentTypes)) {
+        const allowed = new Set(window.allowedComponentTypes);
+        document.querySelectorAll('.component-item').forEach(item => {
+            const type = item.dataset.type;
+            if (!allowed.has(type)) {
+                item.style.display = 'none';
+            }
+        });
+    }
         
     let selectedComponent = null;
+    window.builderIsHydrating = true;
+    window.builderSaveInProgress = false;
+    let autoSaveTimeoutId = null;
 
     let lastSelectedComponent = null;
 
@@ -4801,7 +4852,9 @@ break;
                 // Menu options for investment websites
                 addToMenu: false,
                 menuTitle: '',
-                sectionId: ''
+                sectionId: '',
+                stickyMode: 'normal',
+                stickyTop: '0px'
             };
             
             // Function to update background
@@ -4897,11 +4950,12 @@ break;
             
             // Function to update column gap
             content.updateGap = function(gap) {
-                content._innerSectionData.gap = gap;
+                const safeGap = (typeof gap === 'string' && gap.trim() !== '') ? gap : '15px';
+                content._innerSectionData.gap = safeGap;
                 
                 // Convert gap value to number for Bootstrap spacing
-                const gapValue = parseInt(gap.replace(/[^\d]/g, '')) || 15;
-                const gapUnit = gap.replace(/[\d]/g, '') || 'px';
+                const gapValue = parseInt(safeGap.replace(/[^\d]/g, '')) || 15;
+                const gapUnit = safeGap.replace(/[\d]/g, '') || 'px';
                 
                 // Update margin-bottom for all columns to create visual gap
                 const columns = content.querySelectorAll('.inner-column');
@@ -4912,8 +4966,8 @@ break;
                 // Update the row to use custom CSS variables for gap if needed
                 const container = content.querySelector('.column-container');
                 if (container) {
-                    container.style.setProperty('--bs-gutter-x', gap);
-                    container.style.setProperty('--bs-gutter-y', gap);
+                    container.style.setProperty('--bs-gutter-x', safeGap);
+                    container.style.setProperty('--bs-gutter-y', safeGap);
                 }
             };
             
@@ -5394,6 +5448,189 @@ break;
             content.renderVideoBackground();
         break;
 
+        case 'header-contact-topbar':
+            content = document.createElement('div');
+            content.className = 'header-contact-topbar-component';
+            content._headerContactTopbarData = {
+                phone: '+1 (555) 123-4567',
+                email: 'support@example.com',
+                ctaText: 'Find Us',
+                ctaUrl: '#',
+                bgColor: '#111827',
+                textColor: '#ffffff',
+                fontSize: '14px',
+                fontFamily: 'Outfit',
+                fontWeight: '500',
+                textTransform: 'none',
+                letterSpacing: '0px',
+                textDecoration: 'none',
+                paddingTop: '8px',
+                paddingBottom: '8px',
+                topOffset: '0px'
+            };
+            content.renderHeaderContactTopbar = function() {
+                const d = content._headerContactTopbarData || {};
+                const family = (d.fontFamily || 'Outfit').replace(/\"/g, '&quot;');
+                content.innerHTML = `
+                    <div style="padding: 12px; background: #f1f5f9; border: 1px dashed #94a3b8; border-radius: 6px; text-align: center;">
+                        <div style="display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 14px; background: ${d.bgColor || '#111827'}; padding: ${d.paddingTop || '8px'} 12px ${d.paddingBottom || '8px'}; border-radius: 4px; margin-top: ${d.topOffset || '0px'};">
+                            <span style="color: ${d.textColor || '#ffffff'}; font-size: ${d.fontSize || '14px'}; font-family: '${family}', sans-serif; font-weight: ${d.fontWeight || '500'}; text-transform: ${d.textTransform || 'none'}; letter-spacing: ${d.letterSpacing || '0px'}; text-decoration: ${d.textDecoration || 'none'};">
+                                <i class="fas fa-phone me-1"></i>${d.phone || '+1 (555) 123-4567'}
+                            </span>
+                            <span style="color: ${d.textColor || '#ffffff'}; font-size: ${d.fontSize || '14px'}; font-family: '${family}', sans-serif; font-weight: ${d.fontWeight || '500'}; text-transform: ${d.textTransform || 'none'}; letter-spacing: ${d.letterSpacing || '0px'}; text-decoration: ${d.textDecoration || 'none'};">
+                                <i class="fas fa-envelope me-1"></i>${d.email || 'support@example.com'}
+                            </span>
+                            <span style="color: ${d.textColor || '#ffffff'}; font-size: ${d.fontSize || '14px'}; font-family: '${family}', sans-serif; font-weight: ${d.fontWeight || '500'}; text-transform: ${d.textTransform || 'none'}; letter-spacing: ${d.letterSpacing || '0px'}; text-decoration: ${d.textDecoration || 'none'};">
+                                <i class="fas fa-map-marker-alt me-1"></i>${d.ctaText || 'Find Us'}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            };
+            content.renderHeaderContactTopbar();
+        break;
+
+        case 'header-nav':
+            content = document.createElement('div');
+            content.className = 'header-nav-component';
+            content.innerHTML = '<div style="padding: 16px; background: #ffffff; color: #111827; text-align: center; border: 1px solid #e5e7eb; border-radius: 6px;"><i class="fas fa-bars me-2"></i>Legacy Header Navigation</div>';
+        break;
+
+        case 'header-investor-bar':
+            content = document.createElement('div');
+            content.className = 'header-investor-bar-component';
+            content._headerInvestorBarData = {
+                text: 'Exclusive access for investors',
+                url: '#',
+                bgColor: '#1e3a8a',
+                textColor: '#ffffff',
+                fontSize: '13px',
+                fontFamily: 'Outfit',
+                fontWeight: '500',
+                textTransform: 'uppercase',
+                letterSpacing: '0px',
+                textDecoration: 'none',
+                paddingTop: '5px',
+                paddingBottom: '4px',
+                topOffset: '0px'
+            };
+            content.renderHeaderInvestorBar = function() {
+                const d = content._headerInvestorBarData || {};
+                const family = (d.fontFamily || 'Outfit').replace(/\"/g, '&quot;');
+                content.innerHTML = `
+                    <div style="padding: 12px; background: #eff6ff; border: 1px dashed #93c5fd; border-radius: 6px; text-align: center;">
+                        <div style="display: inline-block; background: ${d.bgColor || '#1e3a8a'}; padding: ${d.paddingTop || '5px'} 10px ${d.paddingBottom || '4px'}; border-radius: 4px; margin-top: ${d.topOffset || '0px'};">
+                            <span style="color: ${d.textColor || '#ffffff'}; font-size: ${d.fontSize || '13px'}; font-family: '${family}', sans-serif; font-weight: ${d.fontWeight || '500'}; text-transform: ${d.textTransform || 'uppercase'}; letter-spacing: ${d.letterSpacing || '0px'}; text-decoration: ${d.textDecoration || 'none'};">
+                                ${d.text || 'Exclusive access for investors'}
+                            </span>
+                        </div>
+                        <div style="margin-top: 8px; font-size: 11px; color: #6b7280;">Investor bar offset and typography are configurable</div>
+                    </div>
+                `;
+            };
+            content.renderHeaderInvestorBar();
+        break;
+
+        case 'header-logo':
+            content = document.createElement('div');
+            content.className = 'header-logo-component';
+            content.innerHTML = '<div style="padding: 16px; background: #f8fafc; color: #111827; text-align: center; border: 1px dashed #94a3b8; border-radius: 6px;"><i class="fas fa-image me-2"></i>Header Logo</div>';
+        break;
+
+        case 'header-menu-links':
+            content = document.createElement('div');
+            content.className = 'header-menu-links-component';
+            content.innerHTML = '<div style="padding: 16px; background: #f8fafc; color: #111827; text-align: center; border: 1px dashed #94a3b8; border-radius: 6px;"><i class="fas fa-list me-2"></i>Header Menu Links</div>';
+        break;
+
+        case 'header-auth-button':
+            content = document.createElement('div');
+            content.className = 'header-auth-button-component';
+            content._headerAuthButtonData = {
+                loginText: 'Login / Register',
+                dashboardText: 'DASHBOARD',
+                bgColor: '#007bff',
+                textColor: '#ffffff',
+                fontSize: '0.9rem',
+                fontFamily: 'Outfit',
+                padding: '0.6rem',
+                borderRadius: '4px'
+            };
+            content.renderHeaderAuthButton = function() {
+                const d = content._headerAuthButtonData || {};
+                const family = (d.fontFamily || 'Outfit').replace(/\"/g, '&quot;');
+                content.innerHTML = `
+                    <div style="padding: 12px; background: #eff6ff; border: 1px dashed #93c5fd; border-radius: 6px; text-align: center;">
+                        <button type="button" class="invest-now-btn sssssttttt" style="background-color: ${d.bgColor || '#007bff'}; color: ${d.textColor || '#ffffff'}; padding: ${d.padding || '0.6rem'}; font-size: ${d.fontSize || '0.9rem'}; font-family: '${family}', sans-serif; border-radius: ${d.borderRadius || '4px'}; border: none;">
+                            ${d.loginText || 'Login / Register'}
+                        </button>
+                        <div style="margin-top: 8px; font-size: 11px; color: #6b7280;">Guest shows Login button, authenticated shows Dashboard</div>
+                    </div>
+                `;
+            };
+            content.renderHeaderAuthButton();
+        break;
+
+        case 'header-invest-button':
+            content = document.createElement('div');
+            content.className = 'header-invest-button-component';
+            content.innerHTML = '<div style="padding: 16px; background: #ecfdf5; color: #047857; text-align: center; border: 1px dashed #6ee7b7; border-radius: 6px;"><i class="fas fa-coins me-2"></i>Header Invest Button</div>';
+        break;
+
+        case 'footer-legacy-main':
+            content = document.createElement('div');
+            content.className = 'footer-legacy-main-component';
+            content.innerHTML = '<div style="padding: 16px; background: #111827; color: #ffffff; text-align: center; border-radius: 6px;"><i class="fas fa-shoe-prints me-2"></i>Legacy Footer Main Block</div>';
+        break;
+
+        case 'footer-logo':
+            content = document.createElement('div');
+            content.className = 'footer-logo-component';
+            content.innerHTML = '<div style="padding: 16px; background: #f8fafc; color: #111827; text-align: center; border: 1px dashed #94a3b8; border-radius: 6px;"><i class="fas fa-image me-2"></i>Footer Logo</div>';
+        break;
+
+        case 'footer-description':
+            content = document.createElement('div');
+            content.className = 'footer-description-component';
+            content.innerHTML = '<div style="padding: 16px; background: #f8fafc; color: #111827; text-align: center; border: 1px dashed #94a3b8; border-radius: 6px;"><i class="fas fa-align-left me-2"></i>Footer Description</div>';
+        break;
+
+        case 'footer-social-links':
+            content = document.createElement('div');
+            content.className = 'footer-social-links-component';
+            content.innerHTML = '<div style="padding: 16px; background: #f8fafc; color: #111827; text-align: center; border: 1px dashed #94a3b8; border-radius: 6px;"><i class="fas fa-share-alt me-2"></i>Footer Social Links</div>';
+        break;
+
+        case 'footer-contact-block':
+            content = document.createElement('div');
+            content.className = 'footer-contact-block-component';
+            content.innerHTML = '<div style="padding: 16px; background: #f8fafc; color: #111827; text-align: center; border: 1px dashed #94a3b8; border-radius: 6px;"><i class="fas fa-envelope me-2"></i>Footer Contact Block</div>';
+        break;
+
+        case 'footer-policy-links':
+            content = document.createElement('div');
+            content.className = 'footer-policy-links-component';
+            content.innerHTML = '<div style="padding: 16px; background: #f8fafc; color: #111827; text-align: center; border: 1px dashed #94a3b8; border-radius: 6px;"><i class="fas fa-gavel me-2"></i>Footer Policy Links</div>';
+        break;
+
+        case 'footer-disclaimer':
+            content = document.createElement('div');
+            content.className = 'footer-disclaimer-component';
+            content.innerHTML = '<div style="padding: 16px; background: #fef3c7; color: #92400e; text-align: center; border: 1px dashed #f59e0b; border-radius: 6px;"><i class="fas fa-file-alt me-2"></i>Footer Disclaimer</div>';
+        break;
+
+        case 'footer-investment-disclaimer':
+            content = document.createElement('div');
+            content.className = 'footer-investment-disclaimer-component';
+            content.innerHTML = '<div style="padding: 16px; background: #fee2e2; color: #991b1b; text-align: center; border: 1px dashed #f87171; border-radius: 6px;"><i class="fas fa-exclamation-triangle me-2"></i>Investment Disclaimer</div>';
+        break;
+
+        case 'footer-background-images':
+            content = document.createElement('div');
+            content.className = 'footer-background-images-component';
+            content.innerHTML = '<div style="padding: 16px; background: #f8fafc; color: #111827; text-align: center; border: 1px dashed #94a3b8; border-radius: 6px;"><i class="fas fa-images me-2"></i>Footer Background Images</div>';
+        break;
+
         case 'custom-html':
             content = document.createElement('div');
             content.className = 'custom-html-component';
@@ -5457,7 +5694,7 @@ break;
                         '<iframe ' +
                             'id="' + iframeId + '" ' +
                             'srcdoc="' + escapedHtml + '" ' +
-                            'style="width: 100%; border: none; background: white; display: block; min-height: ' + d.height + 'px;" ' +
+                            'style="width: 100%; border: none; background: white; display: block;" ' +
                             'sandbox="allow-scripts allow-same-origin allow-top-navigation allow-popups" ' +
                             'scrolling="no">' +
                         '</iframe>' +
@@ -5468,19 +5705,44 @@ break;
                     const iframe = document.getElementById(iframeId);
                     if (iframe) {
                         try {
+                            let resizeFrameId = null;
                             const resizeIframe = () => {
                                 const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
                                 if (iframeDoc && iframeDoc.body) {
-                                    const height = Math.max(
+                                    const bodyHeight = Math.max(
                                         iframeDoc.body.scrollHeight,
-                                        iframeDoc.documentElement.scrollHeight,
-                                        parseInt(d.height) || 300
+                                        iframeDoc.body.offsetHeight,
+                                        iframeDoc.body.getBoundingClientRect ? Math.ceil(iframeDoc.body.getBoundingClientRect().height) : 0
                                     );
-                                    iframe.style.height = height + 'px';
+                                    const documentHeight = iframeDoc.documentElement
+                                        ? Math.max(
+                                            iframeDoc.documentElement.scrollHeight,
+                                            iframeDoc.documentElement.offsetHeight,
+                                            iframeDoc.documentElement.getBoundingClientRect ? Math.ceil(iframeDoc.documentElement.getBoundingClientRect().height) : 0
+                                        )
+                                        : 0;
+                                    const measuredHeight = bodyHeight > 0 ? bodyHeight : documentHeight;
+                                    const fallbackHeight = parseInt(d.height) || 0;
+                                    const height = measuredHeight > 0 ? measuredHeight : (fallbackHeight > 0 ? fallbackHeight : 1);
+                                    const currentHeight = parseInt(iframe.style.height) || 0;
+                                    if (Math.abs(currentHeight - height) > 1) {
+                                        iframe.style.height = height + 'px';
+                                    }
                                 }
                             };
+
+                            const scheduleResize = () => {
+                                if (resizeFrameId) {
+                                    cancelAnimationFrame(resizeFrameId);
+                                }
+
+                                resizeFrameId = requestAnimationFrame(() => {
+                                    resizeFrameId = null;
+                                    resizeIframe();
+                                });
+                            };
                             
-                            iframe.addEventListener('load', resizeIframe);
+                            iframe.addEventListener('load', scheduleResize);
                             resizeIframe();
                             
                             // Periodic resize for dynamic content
@@ -5489,7 +5751,7 @@ break;
                                     clearInterval(resizeInterval);
                                     return;
                                 }
-                                resizeIframe();
+                                scheduleResize();
                             }, 500);
                         } catch (e) {
                             console.warn('Could not auto-resize iframe:', e);
@@ -8121,6 +8383,22 @@ break;
     function getComponentInfo(type) {
         const componentInfo = {
             'inner-section': { icon: 'fa-layer-group', name: 'Inner Section' },
+            'header-contact-topbar': { icon: 'fa-address-card', name: 'Header Contact Topbar' },
+            'header-nav': { icon: 'fa-bars', name: 'Header Navigation' },
+            'header-investor-bar': { icon: 'fa-bullhorn', name: 'Header Investor Bar' },
+            'header-logo': { icon: 'fa-image', name: 'Header Logo' },
+            'header-menu-links': { icon: 'fa-list', name: 'Header Menu Links' },
+            'header-auth-button': { icon: 'fa-user-circle', name: 'Header Login/Dashboard' },
+            'header-invest-button': { icon: 'fa-coins', name: 'Header Invest Button' },
+            'footer-legacy-main': { icon: 'fa-shoe-prints', name: 'Footer Main Block' },
+            'footer-logo': { icon: 'fa-image', name: 'Footer Logo' },
+            'footer-description': { icon: 'fa-align-left', name: 'Footer Description' },
+            'footer-social-links': { icon: 'fa-share-alt', name: 'Footer Social Links' },
+            'footer-contact-block': { icon: 'fa-envelope', name: 'Footer Contact Block' },
+            'footer-policy-links': { icon: 'fa-gavel', name: 'Footer Policy Links' },
+            'footer-disclaimer': { icon: 'fa-file-alt', name: 'Footer Disclaimer' },
+            'footer-investment-disclaimer': { icon: 'fa-exclamation-triangle', name: 'Investment Disclaimer' },
+            'footer-background-images': { icon: 'fa-images', name: 'Footer Background Images' },
             'text': { icon: 'fa-font', name: 'Text' },
             'heading': { icon: 'fa-heading', name: 'Heading' },
             'button': { icon: 'fa-square', name: 'Button' },
@@ -8593,6 +8871,378 @@ break;
             `;
             break;
 
+            case 'header-auth-button':
+            const headerAuthData = content._headerAuthButtonData || {
+                loginText: 'Login / Register',
+                dashboardText: 'DASHBOARD',
+                bgColor: '#007bff',
+                textColor: '#ffffff',
+                fontSize: '0.9rem',
+                fontFamily: 'Outfit',
+                padding: '0.6rem',
+                borderRadius: '4px'
+            };
+
+            const defaultFontOptions = [
+                { value: 'Outfit', label: 'Outfit' },
+                { value: 'Arial', label: 'Arial' },
+                { value: 'Helvetica', label: 'Helvetica' },
+                { value: 'Times New Roman', label: 'Times New Roman' },
+                { value: 'Georgia', label: 'Georgia' },
+                { value: 'Verdana', label: 'Verdana' },
+                { value: 'Courier New', label: 'Courier New' }
+            ];
+            const customFontOptions = Array.isArray(customFonts)
+                ? customFonts.map(font => ({ value: font, label: font }))
+                : [];
+            const fontOptions = [...defaultFontOptions, ...customFontOptions]
+                .filter((font, idx, arr) => arr.findIndex(f => f.value === font.value) === idx)
+                .map(font => `<option value="${font.value}" ${headerAuthData.fontFamily === font.value ? 'selected' : ''}>${font.label}</option>`)
+                .join('');
+
+            specificControls = `
+                <h5 class="mb-3">Header Login/Dashboard Button</h5>
+                <div class="form-group">
+                    <label>Guest Button Text</label>
+                    <input type="text" value="${headerAuthData.loginText || 'Login / Register'}" onchange="updateHeaderAuthButtonField(this.value, 'loginText')">
+                </div>
+                <div class="form-group">
+                    <label>Dashboard Button Text</label>
+                    <input type="text" value="${headerAuthData.dashboardText || 'DASHBOARD'}" onchange="updateHeaderAuthButtonField(this.value, 'dashboardText')">
+                </div>
+                <div class="form-group">
+                    <label>Background Color</label>
+                    <input type="color" value="${headerAuthData.bgColor || '#007bff'}" onchange="updateHeaderAuthButtonField(this.value, 'bgColor')">
+                </div>
+                <div class="form-group">
+                    <label>Text Color</label>
+                    <input type="color" value="${headerAuthData.textColor || '#ffffff'}" onchange="updateHeaderAuthButtonField(this.value, 'textColor')">
+                </div>
+                <div class="form-group">
+                    <label>Font Size</label>
+                    <input type="text" value="${headerAuthData.fontSize || '0.9rem'}" onchange="updateHeaderAuthButtonField(this.value, 'fontSize')" placeholder="e.g., 14px or 0.9rem">
+                </div>
+                <div class="form-group">
+                    <label>Font Family</label>
+                    <select onchange="updateHeaderAuthButtonField(this.value, 'fontFamily')">
+                        ${fontOptions}
+                    </select>
+                    <small class="text-muted d-block">Includes uploaded custom fonts from the system.</small>
+                </div>
+                <div class="form-group">
+                    <label>Padding</label>
+                    <input type="text" value="${headerAuthData.padding || '0.6rem'}" onchange="updateHeaderAuthButtonField(this.value, 'padding')" placeholder="e.g., 0.6rem or 10px 16px">
+                </div>
+                <div class="form-group">
+                    <label>Border Radius</label>
+                    <input type="text" value="${headerAuthData.borderRadius || '4px'}" onchange="updateHeaderAuthButtonField(this.value, 'borderRadius')" placeholder="e.g., 4px">
+                </div>
+            `;
+            break;
+
+            case 'header-menu-links':
+            const menuLinkStyles = {
+                color: content.style.color || '#000000',
+                fontSize: content.style.fontSize || '14px',
+                fontFamily: content.style.fontFamily || 'Outfit',
+                fontWeight: content.style.fontWeight || '500',
+                letterSpacing: content.style.letterSpacing || '0px',
+                textTransform: content.style.textTransform || 'uppercase',
+                textDecoration: content.style.textDecoration || 'none'
+            };
+
+            const menuDefaultFontOptions = [
+                { value: 'Outfit', label: 'Outfit' },
+                { value: 'Arial', label: 'Arial' },
+                { value: 'Helvetica', label: 'Helvetica' },
+                { value: 'Times New Roman', label: 'Times New Roman' },
+                { value: 'Georgia', label: 'Georgia' },
+                { value: 'Verdana', label: 'Verdana' },
+                { value: 'Courier New', label: 'Courier New' }
+            ];
+            const menuCustomFontOptions = Array.isArray(customFonts)
+                ? customFonts.map(font => ({ value: font, label: font }))
+                : [];
+            const menuFontOptions = [...menuDefaultFontOptions, ...menuCustomFontOptions]
+                .filter((font, idx, arr) => arr.findIndex(f => f.value === font.value) === idx)
+                .map(font => `<option value="${font.value}" ${menuLinkStyles.fontFamily === font.value ? 'selected' : ''}>${font.label}</option>`)
+                .join('');
+
+            specificControls = `
+                <h5 class="mb-3">Header Menu Links Typography</h5>
+                <div class="form-group">
+                    <label>Link Color</label>
+                    <input type="color" value="${rgbToHex(menuLinkStyles.color || '#000000')}" onchange="updateHeaderMenuLinksField(this.value, 'color')">
+                </div>
+                <div class="form-group">
+                    <label>Font Size</label>
+                    <input type="text" value="${menuLinkStyles.fontSize}" onchange="updateHeaderMenuLinksField(this.value, 'fontSize')" placeholder="e.g., 14px or 0.95rem">
+                </div>
+                <div class="form-group">
+                    <label>Font Family</label>
+                    <select onchange="updateHeaderMenuLinksField(this.value, 'fontFamily')">
+                        ${menuFontOptions}
+                    </select>
+                    <small class="text-muted d-block">Includes uploaded custom fonts from the system.</small>
+                </div>
+                <div class="form-group">
+                    <label>Font Weight</label>
+                    <select onchange="updateHeaderMenuLinksField(this.value, 'fontWeight')">
+                        <option value="300" ${menuLinkStyles.fontWeight === '300' ? 'selected' : ''}>Light</option>
+                        <option value="400" ${menuLinkStyles.fontWeight === '400' ? 'selected' : ''}>Normal</option>
+                        <option value="500" ${menuLinkStyles.fontWeight === '500' ? 'selected' : ''}>Medium</option>
+                        <option value="600" ${menuLinkStyles.fontWeight === '600' ? 'selected' : ''}>Semi Bold</option>
+                        <option value="700" ${menuLinkStyles.fontWeight === '700' ? 'selected' : ''}>Bold</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Letter Spacing</label>
+                    <input type="text" value="${menuLinkStyles.letterSpacing}" onchange="updateHeaderMenuLinksField(this.value, 'letterSpacing')" placeholder="e.g., 0px or 0.04em">
+                </div>
+                <div class="form-group">
+                    <label>Text Transform</label>
+                    <select onchange="updateHeaderMenuLinksField(this.value, 'textTransform')">
+                        <option value="uppercase" ${menuLinkStyles.textTransform === 'uppercase' ? 'selected' : ''}>UPPERCASE</option>
+                        <option value="capitalize" ${menuLinkStyles.textTransform === 'capitalize' ? 'selected' : ''}>Capitalize</option>
+                        <option value="none" ${menuLinkStyles.textTransform === 'none' ? 'selected' : ''}>None</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Text Decoration</label>
+                    <select onchange="updateHeaderMenuLinksField(this.value, 'textDecoration')">
+                        <option value="none" ${menuLinkStyles.textDecoration === 'none' ? 'selected' : ''}>None</option>
+                        <option value="underline" ${menuLinkStyles.textDecoration === 'underline' ? 'selected' : ''}>Underline</option>
+                    </select>
+                </div>
+            `;
+            break;
+
+            case 'header-investor-bar':
+            const headerInvestorData = content._headerInvestorBarData || {
+                text: 'Exclusive access for investors',
+                url: '#',
+                bgColor: '#1e3a8a',
+                textColor: '#ffffff',
+                fontSize: '13px',
+                fontFamily: 'Outfit',
+                fontWeight: '500',
+                textTransform: 'uppercase',
+                letterSpacing: '0px',
+                textDecoration: 'none',
+                paddingTop: '5px',
+                paddingBottom: '4px',
+                topOffset: '0px'
+            };
+
+            const investorDefaultFontOptions = [
+                { value: 'Outfit', label: 'Outfit' },
+                { value: 'Arial', label: 'Arial' },
+                { value: 'Helvetica', label: 'Helvetica' },
+                { value: 'Times New Roman', label: 'Times New Roman' },
+                { value: 'Georgia', label: 'Georgia' },
+                { value: 'Verdana', label: 'Verdana' },
+                { value: 'Courier New', label: 'Courier New' }
+            ];
+            const investorCustomFontOptions = Array.isArray(customFonts)
+                ? customFonts.map(font => ({ value: font, label: font }))
+                : [];
+            const investorFontOptions = [...investorDefaultFontOptions, ...investorCustomFontOptions]
+                .filter((font, idx, arr) => arr.findIndex(f => f.value === font.value) === idx)
+                .map(font => `<option value="${font.value}" ${headerInvestorData.fontFamily === font.value ? 'selected' : ''}>${font.label}</option>`)
+                .join('');
+
+            specificControls = `
+                <h5 class="mb-3">Header Investor Bar</h5>
+                <div class="form-group">
+                    <label>Text</label>
+                    <input type="text" value="${headerInvestorData.text || 'Exclusive access for investors'}" onchange="updateHeaderInvestorBarField(this.value, 'text')">
+                </div>
+                <div class="form-group">
+                    <label>Link URL</label>
+                    <input type="text" value="${headerInvestorData.url || '#'}" onchange="updateHeaderInvestorBarField(this.value, 'url')">
+                </div>
+                <div class="form-group">
+                    <label>Background Color</label>
+                    <input type="color" value="${headerInvestorData.bgColor || '#1e3a8a'}" onchange="updateHeaderInvestorBarField(this.value, 'bgColor')">
+                </div>
+                <div class="form-group">
+                    <label>Text Color</label>
+                    <input type="color" value="${headerInvestorData.textColor || '#ffffff'}" onchange="updateHeaderInvestorBarField(this.value, 'textColor')">
+                </div>
+                <div class="form-group">
+                    <label>Font Size</label>
+                    <input type="text" value="${headerInvestorData.fontSize || '13px'}" onchange="updateHeaderInvestorBarField(this.value, 'fontSize')" placeholder="e.g., 13px">
+                </div>
+                <div class="form-group">
+                    <label>Font Family</label>
+                    <select onchange="updateHeaderInvestorBarField(this.value, 'fontFamily')">
+                        ${investorFontOptions}
+                    </select>
+                    <small class="text-muted d-block">Includes uploaded custom fonts from the system.</small>
+                </div>
+                <div class="form-group">
+                    <label>Font Weight</label>
+                    <select onchange="updateHeaderInvestorBarField(this.value, 'fontWeight')">
+                        <option value="300" ${headerInvestorData.fontWeight === '300' ? 'selected' : ''}>Light</option>
+                        <option value="400" ${headerInvestorData.fontWeight === '400' ? 'selected' : ''}>Normal</option>
+                        <option value="500" ${headerInvestorData.fontWeight === '500' ? 'selected' : ''}>Medium</option>
+                        <option value="600" ${headerInvestorData.fontWeight === '600' ? 'selected' : ''}>Semi Bold</option>
+                        <option value="700" ${headerInvestorData.fontWeight === '700' ? 'selected' : ''}>Bold</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Text Transform</label>
+                    <select onchange="updateHeaderInvestorBarField(this.value, 'textTransform')">
+                        <option value="uppercase" ${headerInvestorData.textTransform === 'uppercase' ? 'selected' : ''}>UPPERCASE</option>
+                        <option value="capitalize" ${headerInvestorData.textTransform === 'capitalize' ? 'selected' : ''}>Capitalize</option>
+                        <option value="none" ${headerInvestorData.textTransform === 'none' ? 'selected' : ''}>None</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Letter Spacing</label>
+                    <input type="text" value="${headerInvestorData.letterSpacing || '0px'}" onchange="updateHeaderInvestorBarField(this.value, 'letterSpacing')" placeholder="e.g., 0px or 0.04em">
+                </div>
+                <div class="form-group">
+                    <label>Text Decoration</label>
+                    <select onchange="updateHeaderInvestorBarField(this.value, 'textDecoration')">
+                        <option value="none" ${headerInvestorData.textDecoration === 'none' ? 'selected' : ''}>None</option>
+                        <option value="underline" ${headerInvestorData.textDecoration === 'underline' ? 'selected' : ''}>Underline</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Padding Top</label>
+                    <input type="text" value="${headerInvestorData.paddingTop || '5px'}" onchange="updateHeaderInvestorBarField(this.value, 'paddingTop')" placeholder="e.g., 5px">
+                </div>
+                <div class="form-group">
+                    <label>Padding Bottom</label>
+                    <input type="text" value="${headerInvestorData.paddingBottom || '4px'}" onchange="updateHeaderInvestorBarField(this.value, 'paddingBottom')" placeholder="e.g., 4px">
+                </div>
+                <div class="form-group">
+                    <label>Top Offset</label>
+                    <input type="text" value="${headerInvestorData.topOffset || '0px'}" onchange="updateHeaderInvestorBarField(this.value, 'topOffset')" placeholder="e.g., 0px or 6px">
+                    <small class="text-muted d-block">Fine-tune distance from header stack in frontend.</small>
+                </div>
+            `;
+            break;
+
+            case 'header-contact-topbar':
+            const headerContactData = content._headerContactTopbarData || {
+                phone: '+1 (555) 123-4567',
+                email: 'support@example.com',
+                ctaText: 'Find Us',
+                ctaUrl: '#',
+                bgColor: '#111827',
+                textColor: '#ffffff',
+                fontSize: '14px',
+                fontFamily: 'Outfit',
+                fontWeight: '500',
+                textTransform: 'none',
+                letterSpacing: '0px',
+                textDecoration: 'none',
+                paddingTop: '8px',
+                paddingBottom: '8px',
+                topOffset: '0px'
+            };
+
+            const contactDefaultFontOptions = [
+                { value: 'Outfit', label: 'Outfit' },
+                { value: 'Arial', label: 'Arial' },
+                { value: 'Helvetica', label: 'Helvetica' },
+                { value: 'Times New Roman', label: 'Times New Roman' },
+                { value: 'Georgia', label: 'Georgia' },
+                { value: 'Verdana', label: 'Verdana' },
+                { value: 'Courier New', label: 'Courier New' }
+            ];
+            const contactCustomFontOptions = Array.isArray(customFonts)
+                ? customFonts.map(font => ({ value: font, label: font }))
+                : [];
+            const contactFontOptions = [...contactDefaultFontOptions, ...contactCustomFontOptions]
+                .filter((font, idx, arr) => arr.findIndex(f => f.value === font.value) === idx)
+                .map(font => `<option value="${font.value}" ${headerContactData.fontFamily === font.value ? 'selected' : ''}>${font.label}</option>`)
+                .join('');
+
+            specificControls = `
+                <h5 class="mb-3">Header Contact Topbar</h5>
+                <div class="form-group">
+                    <label>Phone</label>
+                    <input type="text" value="${headerContactData.phone || '+1 (555) 123-4567'}" onchange="updateHeaderContactTopbarField(this.value, 'phone')">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="text" value="${headerContactData.email || 'support@example.com'}" onchange="updateHeaderContactTopbarField(this.value, 'email')">
+                </div>
+                <div class="form-group">
+                    <label>CTA Text</label>
+                    <input type="text" value="${headerContactData.ctaText || 'Find Us'}" onchange="updateHeaderContactTopbarField(this.value, 'ctaText')">
+                </div>
+                <div class="form-group">
+                    <label>CTA URL</label>
+                    <input type="text" value="${headerContactData.ctaUrl || '#'}" onchange="updateHeaderContactTopbarField(this.value, 'ctaUrl')">
+                </div>
+                <div class="form-group">
+                    <label>Background Color</label>
+                    <input type="color" value="${headerContactData.bgColor || '#111827'}" onchange="updateHeaderContactTopbarField(this.value, 'bgColor')">
+                </div>
+                <div class="form-group">
+                    <label>Text Color</label>
+                    <input type="color" value="${headerContactData.textColor || '#ffffff'}" onchange="updateHeaderContactTopbarField(this.value, 'textColor')">
+                </div>
+                <div class="form-group">
+                    <label>Font Size</label>
+                    <input type="text" value="${headerContactData.fontSize || '14px'}" onchange="updateHeaderContactTopbarField(this.value, 'fontSize')" placeholder="e.g., 14px">
+                </div>
+                <div class="form-group">
+                    <label>Font Family</label>
+                    <select onchange="updateHeaderContactTopbarField(this.value, 'fontFamily')">
+                        ${contactFontOptions}
+                    </select>
+                    <small class="text-muted d-block">Includes uploaded custom fonts from the system.</small>
+                </div>
+                <div class="form-group">
+                    <label>Font Weight</label>
+                    <select onchange="updateHeaderContactTopbarField(this.value, 'fontWeight')">
+                        <option value="300" ${headerContactData.fontWeight === '300' ? 'selected' : ''}>Light</option>
+                        <option value="400" ${headerContactData.fontWeight === '400' ? 'selected' : ''}>Normal</option>
+                        <option value="500" ${headerContactData.fontWeight === '500' ? 'selected' : ''}>Medium</option>
+                        <option value="600" ${headerContactData.fontWeight === '600' ? 'selected' : ''}>Semi Bold</option>
+                        <option value="700" ${headerContactData.fontWeight === '700' ? 'selected' : ''}>Bold</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Text Transform</label>
+                    <select onchange="updateHeaderContactTopbarField(this.value, 'textTransform')">
+                        <option value="uppercase" ${headerContactData.textTransform === 'uppercase' ? 'selected' : ''}>UPPERCASE</option>
+                        <option value="capitalize" ${headerContactData.textTransform === 'capitalize' ? 'selected' : ''}>Capitalize</option>
+                        <option value="none" ${headerContactData.textTransform === 'none' ? 'selected' : ''}>None</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Letter Spacing</label>
+                    <input type="text" value="${headerContactData.letterSpacing || '0px'}" onchange="updateHeaderContactTopbarField(this.value, 'letterSpacing')" placeholder="e.g., 0px or 0.04em">
+                </div>
+                <div class="form-group">
+                    <label>Text Decoration</label>
+                    <select onchange="updateHeaderContactTopbarField(this.value, 'textDecoration')">
+                        <option value="none" ${headerContactData.textDecoration === 'none' ? 'selected' : ''}>None</option>
+                        <option value="underline" ${headerContactData.textDecoration === 'underline' ? 'selected' : ''}>Underline</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Padding Top</label>
+                    <input type="text" value="${headerContactData.paddingTop || '8px'}" onchange="updateHeaderContactTopbarField(this.value, 'paddingTop')" placeholder="e.g., 8px">
+                </div>
+                <div class="form-group">
+                    <label>Padding Bottom</label>
+                    <input type="text" value="${headerContactData.paddingBottom || '8px'}" onchange="updateHeaderContactTopbarField(this.value, 'paddingBottom')" placeholder="e.g., 8px">
+                </div>
+                <div class="form-group">
+                    <label>Top Offset</label>
+                    <input type="text" value="${headerContactData.topOffset || '0px'}" onchange="updateHeaderContactTopbarField(this.value, 'topOffset')" placeholder="e.g., 0px or 6px">
+                    <small class="text-muted d-block">Applies as margin-top in frontend.</small>
+                </div>
+            `;
+            break;
+
             case 'text':
             const textElement = content.querySelector('[id^="text-content-"]');
             const textContent = textElement ? textElement.innerHTML : content.textContent;
@@ -8748,6 +9398,21 @@ break;
                 <div class="form-group">
                     <label>Margin</label>
                     <input type="text" value="${innerSectionData.margin || '10px 0'}" onchange="updateInnerSectionField(this.value, 'margin')">
+                </div>
+
+                <h4 style="margin: 20px 0 10px 0; color: #333;">Positioning</h4>
+                <div class="form-group">
+                    <label>Section Mode</label>
+                    <select onchange="updateInnerSectionField(this.value, 'stickyMode'); toggleInnerSectionStickyOptions(this.value)">
+                        <option value="normal" ${(innerSectionData.stickyMode || 'normal') === 'normal' ? 'selected' : ''}>Normal</option>
+                        <option value="sticky" ${innerSectionData.stickyMode === 'sticky' ? 'selected' : ''}>Sticky</option>
+                    </select>
+                    <small class="text-muted">Sticky keeps this section fixed while scrolling until its parent boundary ends.</small>
+                </div>
+                <div class="form-group" id="innerSectionStickyTopGroup" style="display: ${innerSectionData.stickyMode === 'sticky' ? 'block' : 'none'};">
+                    <label>Sticky Top Offset</label>
+                    <input type="text" value="${innerSectionData.stickyTop || '0px'}" onchange="updateInnerSectionField(this.value, 'stickyTop')" placeholder="e.g., 0px, 80px">
+                    <small class="text-muted">Distance from top when sticky is active.</small>
                 </div>
                 
                 <h4 style="margin: 20px 0 10px 0; color: #333; border-top: 2px solid #667eea; padding-top: 15px;">
@@ -11376,7 +12041,7 @@ break;
         }
 
         // Common styling controls - skip for components that have their own rich editors
-        const commonControls = (type === 'invest-cta' || type === 'section-title' || type === 'newsletter') ? '' : `
+        const commonControls = (type === 'invest-cta' || type === 'section-title' || type === 'newsletter' || type === 'header-auth-button' || type === 'header-menu-links' || type === 'header-investor-bar' || type === 'header-contact-topbar') ? '' : `
             <div class="form-group">
             <label>Font Size</label>
             <input type="text" value="${content.style.fontSize || '16px'}" oninput="updateStyle(this, 'fontSize')">
@@ -13131,6 +13796,13 @@ function toggleAnimationSettings(enabled) {
         animationSettings.style.display = enabled ? 'block' : 'none';
     }
     
+
+function toggleInnerSectionStickyOptions(mode) {
+    const stickyGroup = document.getElementById('innerSectionStickyTopGroup');
+    if (stickyGroup) {
+        stickyGroup.style.display = mode === 'sticky' ? 'block' : 'none';
+    }
+}
     // Apply or remove animations from the section
     if (!selectedComponent) return;
     const content = getContentElement(selectedComponent);
@@ -13576,6 +14248,125 @@ function updateButtonField(value, field) {
     
     // Re-render the component
     content.renderButton();
+}
+
+function updateHeaderAuthButtonField(value, field) {
+    if (!selectedComponent) return;
+    const content = getContentElement(selectedComponent);
+
+    if (!content._headerAuthButtonData) {
+        content._headerAuthButtonData = {
+            loginText: 'Login / Register',
+            dashboardText: 'DASHBOARD',
+            bgColor: '#007bff',
+            textColor: '#ffffff',
+            fontSize: '0.9rem',
+            fontFamily: 'Outfit',
+            padding: '0.6rem',
+            borderRadius: '4px'
+        };
+    }
+
+    content._headerAuthButtonData[field] = value;
+
+    if (typeof content.renderHeaderAuthButton === 'function') {
+        content.renderHeaderAuthButton();
+    }
+}
+
+function updateHeaderMenuLinksField(value, field) {
+    if (!selectedComponent) return;
+    const content = getContentElement(selectedComponent);
+
+    if (!content) return;
+
+    content.style[field] = value;
+
+    // Keep the placeholder preview in sync with selected typography values.
+    const preview = content.querySelector('div');
+    if (preview) {
+        preview.style[field] = value;
+    }
+}
+
+function updateHeaderInvestorBarField(value, field) {
+    if (!selectedComponent) return;
+    const content = getContentElement(selectedComponent);
+    if (!content) return;
+
+    if (!content._headerInvestorBarData) {
+        content._headerInvestorBarData = {
+            text: 'Exclusive access for investors',
+            url: '#',
+            bgColor: '#1e3a8a',
+            textColor: '#ffffff',
+            fontSize: '13px',
+            fontFamily: 'Outfit',
+            fontWeight: '500',
+            textTransform: 'uppercase',
+            letterSpacing: '0px',
+            textDecoration: 'none',
+            paddingTop: '5px',
+            paddingBottom: '4px',
+            topOffset: '0px'
+        };
+    }
+
+    content._headerInvestorBarData[field] = value;
+
+    // Mirror typography fields into style so generic style serialization also carries these values.
+    if (field === 'fontSize' || field === 'fontFamily' || field === 'fontWeight' || field === 'letterSpacing' || field === 'textTransform' || field === 'textDecoration' || field === 'color' || field === 'textColor') {
+        if (field === 'textColor') {
+            content.style.color = value;
+        } else {
+            content.style[field] = value;
+        }
+    }
+
+    if (typeof content.renderHeaderInvestorBar === 'function') {
+        content.renderHeaderInvestorBar();
+    }
+}
+
+function updateHeaderContactTopbarField(value, field) {
+    if (!selectedComponent) return;
+    const content = getContentElement(selectedComponent);
+    if (!content) return;
+
+    if (!content._headerContactTopbarData) {
+        content._headerContactTopbarData = {
+            phone: '+1 (555) 123-4567',
+            email: 'support@example.com',
+            ctaText: 'Find Us',
+            ctaUrl: '#',
+            bgColor: '#111827',
+            textColor: '#ffffff',
+            fontSize: '14px',
+            fontFamily: 'Outfit',
+            fontWeight: '500',
+            textTransform: 'none',
+            letterSpacing: '0px',
+            textDecoration: 'none',
+            paddingTop: '8px',
+            paddingBottom: '8px',
+            topOffset: '0px'
+        };
+    }
+
+    content._headerContactTopbarData[field] = value;
+
+    // Keep common typography style values mirrored for style serialization consistency.
+    if (field === 'fontSize' || field === 'fontFamily' || field === 'fontWeight' || field === 'letterSpacing' || field === 'textTransform' || field === 'textDecoration' || field === 'color' || field === 'textColor') {
+        if (field === 'textColor') {
+            content.style.color = value;
+        } else {
+            content.style[field] = value;
+        }
+    }
+
+    if (typeof content.renderHeaderContactTopbar === 'function') {
+        content.renderHeaderContactTopbar();
+    }
 }
 
 // Alert message field update function
@@ -16199,6 +16990,63 @@ function applyResponsiveStyles() {
                 data.properties.transition = content._buttonData.transition || 'all 0.3s ease';
             }
             break;
+
+          case 'header-auth-button':
+            data.headerAuthButtonData = content._headerAuthButtonData || {};
+            if (content._headerAuthButtonData) {
+                data.properties = data.properties || {};
+                data.properties.login_text = content._headerAuthButtonData.loginText || 'Login / Register';
+                data.properties.dashboard_text = content._headerAuthButtonData.dashboardText || 'DASHBOARD';
+                data.properties.button_bg_color = content._headerAuthButtonData.bgColor || '#007bff';
+                data.properties.button_text_color = content._headerAuthButtonData.textColor || '#ffffff';
+                data.properties.font_size = content._headerAuthButtonData.fontSize || '0.9rem';
+                data.properties.font_family = content._headerAuthButtonData.fontFamily || 'Outfit';
+                data.properties.button_padding = content._headerAuthButtonData.padding || '0.6rem';
+                data.properties.border_radius = content._headerAuthButtonData.borderRadius || '4px';
+            }
+            break;
+
+                    case 'header-contact-topbar':
+                        data.headerContactTopbarData = content._headerContactTopbarData || {};
+                        if (content._headerContactTopbarData) {
+                                data.properties = data.properties || {};
+                                data.properties.contact_phone = content._headerContactTopbarData.phone || '+1 (555) 123-4567';
+                                data.properties.contact_email = content._headerContactTopbarData.email || 'support@example.com';
+                                data.properties.contact_cta_text = content._headerContactTopbarData.ctaText || 'Find Us';
+                                data.properties.contact_cta_url = content._headerContactTopbarData.ctaUrl || '#';
+                                data.properties.background_color = content._headerContactTopbarData.bgColor || '#111827';
+                                data.properties.text_color = content._headerContactTopbarData.textColor || '#ffffff';
+                                data.properties.font_size = content._headerContactTopbarData.fontSize || '14px';
+                                data.properties.font_family = content._headerContactTopbarData.fontFamily || 'Outfit';
+                                data.properties.font_weight = content._headerContactTopbarData.fontWeight || '500';
+                                data.properties.text_transform = content._headerContactTopbarData.textTransform || 'none';
+                                data.properties.letter_spacing = content._headerContactTopbarData.letterSpacing || '0px';
+                                data.properties.text_decoration = content._headerContactTopbarData.textDecoration || 'none';
+                                data.properties.padding_top = content._headerContactTopbarData.paddingTop || '8px';
+                                data.properties.padding_bottom = content._headerContactTopbarData.paddingBottom || '8px';
+                                data.properties.top_offset = content._headerContactTopbarData.topOffset || '0px';
+                        }
+                        break;
+
+          case 'header-investor-bar':
+            data.headerInvestorBarData = content._headerInvestorBarData || {};
+            if (content._headerInvestorBarData) {
+                data.properties = data.properties || {};
+                data.properties.investor_text = content._headerInvestorBarData.text || 'Exclusive access for investors';
+                data.properties.investor_url = content._headerInvestorBarData.url || '#';
+                data.properties.background_color = content._headerInvestorBarData.bgColor || '#1e3a8a';
+                data.properties.text_color = content._headerInvestorBarData.textColor || '#ffffff';
+                data.properties.font_size = content._headerInvestorBarData.fontSize || '13px';
+                data.properties.font_family = content._headerInvestorBarData.fontFamily || 'Outfit';
+                data.properties.font_weight = content._headerInvestorBarData.fontWeight || '500';
+                data.properties.text_transform = content._headerInvestorBarData.textTransform || 'uppercase';
+                data.properties.letter_spacing = content._headerInvestorBarData.letterSpacing || '0px';
+                data.properties.text_decoration = content._headerInvestorBarData.textDecoration || 'none';
+                data.properties.padding_top = content._headerInvestorBarData.paddingTop || '5px';
+                data.properties.padding_bottom = content._headerInvestorBarData.paddingBottom || '4px';
+                data.properties.top_offset = content._headerInvestorBarData.topOffset || '0px';
+            }
+            break;
             
           case 'alert-message':
             data.alertData = content._alertData;
@@ -16466,6 +17314,60 @@ function applyResponsiveStyles() {
                         compData.properties.transition = compContent._buttonData.transition || 'all 0.3s ease';
                       }
                       break;
+                                        case 'header-auth-button':
+                                            if (compContent._headerAuthButtonData) {
+                                                compData.headerAuthButtonData = compContent._headerAuthButtonData;
+                                                compData.properties = compData.properties || {};
+                                                compData.properties.login_text = compContent._headerAuthButtonData.loginText || 'Login / Register';
+                                                compData.properties.dashboard_text = compContent._headerAuthButtonData.dashboardText || 'DASHBOARD';
+                                                compData.properties.button_bg_color = compContent._headerAuthButtonData.bgColor || '#007bff';
+                                                compData.properties.button_text_color = compContent._headerAuthButtonData.textColor || '#ffffff';
+                                                compData.properties.font_size = compContent._headerAuthButtonData.fontSize || '0.9rem';
+                                                compData.properties.font_family = compContent._headerAuthButtonData.fontFamily || 'Outfit';
+                                                compData.properties.button_padding = compContent._headerAuthButtonData.padding || '0.6rem';
+                                                compData.properties.border_radius = compContent._headerAuthButtonData.borderRadius || '4px';
+                                            }
+                                            break;
+                                        case 'header-contact-topbar':
+                                            if (compContent._headerContactTopbarData) {
+                                                compData.headerContactTopbarData = compContent._headerContactTopbarData;
+                                                compData.properties = compData.properties || {};
+                                                compData.properties.contact_phone = compContent._headerContactTopbarData.phone || '+1 (555) 123-4567';
+                                                compData.properties.contact_email = compContent._headerContactTopbarData.email || 'support@example.com';
+                                                compData.properties.contact_cta_text = compContent._headerContactTopbarData.ctaText || 'Find Us';
+                                                compData.properties.contact_cta_url = compContent._headerContactTopbarData.ctaUrl || '#';
+                                                compData.properties.background_color = compContent._headerContactTopbarData.bgColor || '#111827';
+                                                compData.properties.text_color = compContent._headerContactTopbarData.textColor || '#ffffff';
+                                                compData.properties.font_size = compContent._headerContactTopbarData.fontSize || '14px';
+                                                compData.properties.font_family = compContent._headerContactTopbarData.fontFamily || 'Outfit';
+                                                compData.properties.font_weight = compContent._headerContactTopbarData.fontWeight || '500';
+                                                compData.properties.text_transform = compContent._headerContactTopbarData.textTransform || 'none';
+                                                compData.properties.letter_spacing = compContent._headerContactTopbarData.letterSpacing || '0px';
+                                                compData.properties.text_decoration = compContent._headerContactTopbarData.textDecoration || 'none';
+                                                compData.properties.padding_top = compContent._headerContactTopbarData.paddingTop || '8px';
+                                                compData.properties.padding_bottom = compContent._headerContactTopbarData.paddingBottom || '8px';
+                                                compData.properties.top_offset = compContent._headerContactTopbarData.topOffset || '0px';
+                                            }
+                                            break;
+                                        case 'header-investor-bar':
+                                            if (compContent._headerInvestorBarData) {
+                                                compData.headerInvestorBarData = compContent._headerInvestorBarData;
+                                                compData.properties = compData.properties || {};
+                                                compData.properties.investor_text = compContent._headerInvestorBarData.text || 'Exclusive access for investors';
+                                                compData.properties.investor_url = compContent._headerInvestorBarData.url || '#';
+                                                compData.properties.background_color = compContent._headerInvestorBarData.bgColor || '#1e3a8a';
+                                                compData.properties.text_color = compContent._headerInvestorBarData.textColor || '#ffffff';
+                                                compData.properties.font_size = compContent._headerInvestorBarData.fontSize || '13px';
+                                                compData.properties.font_family = compContent._headerInvestorBarData.fontFamily || 'Outfit';
+                                                compData.properties.font_weight = compContent._headerInvestorBarData.fontWeight || '500';
+                                                compData.properties.text_transform = compContent._headerInvestorBarData.textTransform || 'uppercase';
+                                                compData.properties.letter_spacing = compContent._headerInvestorBarData.letterSpacing || '0px';
+                                                compData.properties.text_decoration = compContent._headerInvestorBarData.textDecoration || 'none';
+                                                compData.properties.padding_top = compContent._headerInvestorBarData.paddingTop || '5px';
+                                                compData.properties.padding_bottom = compContent._headerInvestorBarData.paddingBottom || '4px';
+                                                compData.properties.top_offset = compContent._headerInvestorBarData.topOffset || '0px';
+                                            }
+                                            break;
                     case 'video':
                       if (compContent._videoData) {
                         console.log('Serializing nested video with data:', compContent._videoData);
@@ -16644,7 +17546,7 @@ function applyResponsiveStyles() {
       // Apply page settings
       if (pageSettings.backgroundColor) {
         console.log('[DESERIALIZE] Applying backgroundColor from pageSettings:', pageSettings.backgroundColor);
-        updatePageBackground(pageSettings.backgroundColor);
+                updatePageBackground(pageSettings.backgroundColor, { skipAutoSave: true });
         const colorInput = document.getElementById('pageBackgroundColor');
         if (colorInput) {
           colorInput.value = pageSettings.backgroundColor;
@@ -17055,6 +17957,147 @@ function applyResponsiveStyles() {
                 
                 actualContent._buttonData = data.buttonData || buttonDefaults;
                 actualContent.renderButton();
+                if (data.style) Object.assign(actualContent.style, data.style);
+                if (data.wrapperStyle) Object.assign(actualComponent.style, data.wrapperStyle);
+                if (data.responsiveStyles) actualContent._responsiveStyles = data.responsiveStyles;
+                break;
+
+            case 'header-auth-button':
+                let headerAuthDefaults = {
+                    loginText: 'Login / Register',
+                    dashboardText: 'DASHBOARD',
+                    bgColor: '#007bff',
+                    textColor: '#ffffff',
+                    fontSize: '0.9rem',
+                    fontFamily: 'Outfit',
+                    padding: '0.6rem',
+                    borderRadius: '4px'
+                };
+
+                if (data.properties) {
+                    headerAuthDefaults.loginText = data.properties.login_text || headerAuthDefaults.loginText;
+                    headerAuthDefaults.dashboardText = data.properties.dashboard_text || headerAuthDefaults.dashboardText;
+                    headerAuthDefaults.bgColor = data.properties.button_bg_color || headerAuthDefaults.bgColor;
+                    headerAuthDefaults.textColor = data.properties.button_text_color || headerAuthDefaults.textColor;
+                    headerAuthDefaults.fontSize = data.properties.font_size || headerAuthDefaults.fontSize;
+                    headerAuthDefaults.fontFamily = data.properties.font_family || headerAuthDefaults.fontFamily;
+                    headerAuthDefaults.padding = data.properties.button_padding || headerAuthDefaults.padding;
+                    headerAuthDefaults.borderRadius = data.properties.border_radius || headerAuthDefaults.borderRadius;
+                }
+
+                const savedHeaderAuthData = (data.headerAuthButtonData && typeof data.headerAuthButtonData === 'object')
+                    ? data.headerAuthButtonData
+                    : {};
+
+                actualContent._headerAuthButtonData = {
+                    ...headerAuthDefaults,
+                    ...savedHeaderAuthData
+                };
+                if (typeof actualContent.renderHeaderAuthButton === 'function') {
+                    actualContent.renderHeaderAuthButton();
+                }
+                if (data.style) Object.assign(actualContent.style, data.style);
+                if (data.wrapperStyle) Object.assign(actualComponent.style, data.wrapperStyle);
+                if (data.responsiveStyles) actualContent._responsiveStyles = data.responsiveStyles;
+                break;
+
+            case 'header-contact-topbar':
+                let headerContactDefaults = {
+                    phone: '+1 (555) 123-4567',
+                    email: 'support@example.com',
+                    ctaText: 'Find Us',
+                    ctaUrl: '#',
+                    bgColor: '#111827',
+                    textColor: '#ffffff',
+                    fontSize: '14px',
+                    fontFamily: 'Outfit',
+                    fontWeight: '500',
+                    textTransform: 'none',
+                    letterSpacing: '0px',
+                    textDecoration: 'none',
+                    paddingTop: '8px',
+                    paddingBottom: '8px',
+                    topOffset: '0px'
+                };
+
+                if (data.properties) {
+                    headerContactDefaults.phone = data.properties.contact_phone || headerContactDefaults.phone;
+                    headerContactDefaults.email = data.properties.contact_email || headerContactDefaults.email;
+                    headerContactDefaults.ctaText = data.properties.contact_cta_text || headerContactDefaults.ctaText;
+                    headerContactDefaults.ctaUrl = data.properties.contact_cta_url || headerContactDefaults.ctaUrl;
+                    headerContactDefaults.bgColor = data.properties.background_color || headerContactDefaults.bgColor;
+                    headerContactDefaults.textColor = data.properties.text_color || headerContactDefaults.textColor;
+                    headerContactDefaults.fontSize = data.properties.font_size || headerContactDefaults.fontSize;
+                    headerContactDefaults.fontFamily = data.properties.font_family || headerContactDefaults.fontFamily;
+                    headerContactDefaults.fontWeight = data.properties.font_weight || headerContactDefaults.fontWeight;
+                    headerContactDefaults.textTransform = data.properties.text_transform || headerContactDefaults.textTransform;
+                    headerContactDefaults.letterSpacing = data.properties.letter_spacing || headerContactDefaults.letterSpacing;
+                    headerContactDefaults.textDecoration = data.properties.text_decoration || headerContactDefaults.textDecoration;
+                    headerContactDefaults.paddingTop = data.properties.padding_top || headerContactDefaults.paddingTop;
+                    headerContactDefaults.paddingBottom = data.properties.padding_bottom || headerContactDefaults.paddingBottom;
+                    headerContactDefaults.topOffset = data.properties.top_offset || headerContactDefaults.topOffset;
+                }
+
+                const savedHeaderContactData = (data.headerContactTopbarData && typeof data.headerContactTopbarData === 'object')
+                    ? data.headerContactTopbarData
+                    : {};
+
+                actualContent._headerContactTopbarData = {
+                    ...headerContactDefaults,
+                    ...savedHeaderContactData
+                };
+                if (typeof actualContent.renderHeaderContactTopbar === 'function') {
+                    actualContent.renderHeaderContactTopbar();
+                }
+                if (data.style) Object.assign(actualContent.style, data.style);
+                if (data.wrapperStyle) Object.assign(actualComponent.style, data.wrapperStyle);
+                if (data.responsiveStyles) actualContent._responsiveStyles = data.responsiveStyles;
+                break;
+
+            case 'header-investor-bar':
+                let headerInvestorDefaults = {
+                    text: 'Exclusive access for investors',
+                    url: '#',
+                    bgColor: '#1e3a8a',
+                    textColor: '#ffffff',
+                    fontSize: '13px',
+                    fontFamily: 'Outfit',
+                    fontWeight: '500',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0px',
+                    textDecoration: 'none',
+                    paddingTop: '5px',
+                    paddingBottom: '4px',
+                    topOffset: '0px'
+                };
+
+                if (data.properties) {
+                    headerInvestorDefaults.text = data.properties.investor_text || headerInvestorDefaults.text;
+                    headerInvestorDefaults.url = data.properties.investor_url || headerInvestorDefaults.url;
+                    headerInvestorDefaults.bgColor = data.properties.background_color || headerInvestorDefaults.bgColor;
+                    headerInvestorDefaults.textColor = data.properties.text_color || headerInvestorDefaults.textColor;
+                    headerInvestorDefaults.fontSize = data.properties.font_size || headerInvestorDefaults.fontSize;
+                    headerInvestorDefaults.fontFamily = data.properties.font_family || headerInvestorDefaults.fontFamily;
+                    headerInvestorDefaults.fontWeight = data.properties.font_weight || headerInvestorDefaults.fontWeight;
+                    headerInvestorDefaults.textTransform = data.properties.text_transform || headerInvestorDefaults.textTransform;
+                    headerInvestorDefaults.letterSpacing = data.properties.letter_spacing || headerInvestorDefaults.letterSpacing;
+                    headerInvestorDefaults.textDecoration = data.properties.text_decoration || headerInvestorDefaults.textDecoration;
+                    headerInvestorDefaults.paddingTop = data.properties.padding_top || headerInvestorDefaults.paddingTop;
+                    headerInvestorDefaults.paddingBottom = data.properties.padding_bottom || headerInvestorDefaults.paddingBottom;
+                    headerInvestorDefaults.topOffset = data.properties.top_offset || headerInvestorDefaults.topOffset;
+                }
+
+                const savedInvestorBarData = (data.headerInvestorBarData && typeof data.headerInvestorBarData === 'object')
+                    ? data.headerInvestorBarData
+                    : {};
+
+                actualContent._headerInvestorBarData = {
+                    ...headerInvestorDefaults,
+                    ...savedInvestorBarData
+                };
+                if (typeof actualContent.renderHeaderInvestorBar === 'function') {
+                    actualContent.renderHeaderInvestorBar();
+                }
                 if (data.style) Object.assign(actualContent.style, data.style);
                 if (data.wrapperStyle) Object.assign(actualComponent.style, data.wrapperStyle);
                 if (data.responsiveStyles) actualContent._responsiveStyles = data.responsiveStyles;
@@ -18142,8 +19185,17 @@ function applyResponsiveStyles() {
               padding: '20px',
               margin: '10px 0',
               columns: 2,
-              gap: '15px'
+                            gap: '15px',
+                            stickyMode: 'normal',
+                            stickyTop: '0px'
             };
+
+                        if (!content._innerSectionData.stickyMode) {
+                            content._innerSectionData.stickyMode = 'normal';
+                        }
+                        if (!content._innerSectionData.stickyTop) {
+                            content._innerSectionData.stickyTop = '0px';
+                        }
             
             // Update the section with saved data
             content.updateColumns(content._innerSectionData.columns);
@@ -18528,6 +19580,138 @@ function applyResponsiveStyles() {
                         nestedContent._buttonData = compData.buttonData || buttonDefaults;
                         nestedContent.renderButton();
                         break;
+                                            case 'header-auth-button':
+                                                let nestedHeaderAuthDefaults = {
+                                                    loginText: 'Login / Register',
+                                                    dashboardText: 'DASHBOARD',
+                                                    bgColor: '#007bff',
+                                                    textColor: '#ffffff',
+                                                    fontSize: '0.9rem',
+                                                    fontFamily: 'Outfit',
+                                                    padding: '0.6rem',
+                                                    borderRadius: '4px'
+                                                };
+
+                                                if (compData.properties) {
+                                                    nestedHeaderAuthDefaults.loginText = compData.properties.login_text || nestedHeaderAuthDefaults.loginText;
+                                                    nestedHeaderAuthDefaults.dashboardText = compData.properties.dashboard_text || nestedHeaderAuthDefaults.dashboardText;
+                                                    nestedHeaderAuthDefaults.bgColor = compData.properties.button_bg_color || nestedHeaderAuthDefaults.bgColor;
+                                                    nestedHeaderAuthDefaults.textColor = compData.properties.button_text_color || nestedHeaderAuthDefaults.textColor;
+                                                    nestedHeaderAuthDefaults.fontSize = compData.properties.font_size || nestedHeaderAuthDefaults.fontSize;
+                                                    nestedHeaderAuthDefaults.fontFamily = compData.properties.font_family || nestedHeaderAuthDefaults.fontFamily;
+                                                    nestedHeaderAuthDefaults.padding = compData.properties.button_padding || nestedHeaderAuthDefaults.padding;
+                                                    nestedHeaderAuthDefaults.borderRadius = compData.properties.border_radius || nestedHeaderAuthDefaults.borderRadius;
+                                                }
+
+                                                const nestedSavedHeaderAuthData = (compData.headerAuthButtonData && typeof compData.headerAuthButtonData === 'object')
+                                                    ? compData.headerAuthButtonData
+                                                    : {};
+
+                                                nestedContent._headerAuthButtonData = {
+                                                    ...nestedHeaderAuthDefaults,
+                                                    ...nestedSavedHeaderAuthData
+                                                };
+
+                                                if (typeof nestedContent.renderHeaderAuthButton === 'function') {
+                                                    nestedContent.renderHeaderAuthButton();
+                                                }
+                                                break;
+                                            case 'header-contact-topbar':
+                                                let nestedHeaderContactDefaults = {
+                                                    phone: '+1 (555) 123-4567',
+                                                    email: 'support@example.com',
+                                                    ctaText: 'Find Us',
+                                                    ctaUrl: '#',
+                                                    bgColor: '#111827',
+                                                    textColor: '#ffffff',
+                                                    fontSize: '14px',
+                                                    fontFamily: 'Outfit',
+                                                    fontWeight: '500',
+                                                    textTransform: 'none',
+                                                    letterSpacing: '0px',
+                                                    textDecoration: 'none',
+                                                    paddingTop: '8px',
+                                                    paddingBottom: '8px',
+                                                    topOffset: '0px'
+                                                };
+
+                                                if (compData.properties) {
+                                                    nestedHeaderContactDefaults.phone = compData.properties.contact_phone || nestedHeaderContactDefaults.phone;
+                                                    nestedHeaderContactDefaults.email = compData.properties.contact_email || nestedHeaderContactDefaults.email;
+                                                    nestedHeaderContactDefaults.ctaText = compData.properties.contact_cta_text || nestedHeaderContactDefaults.ctaText;
+                                                    nestedHeaderContactDefaults.ctaUrl = compData.properties.contact_cta_url || nestedHeaderContactDefaults.ctaUrl;
+                                                    nestedHeaderContactDefaults.bgColor = compData.properties.background_color || nestedHeaderContactDefaults.bgColor;
+                                                    nestedHeaderContactDefaults.textColor = compData.properties.text_color || nestedHeaderContactDefaults.textColor;
+                                                    nestedHeaderContactDefaults.fontSize = compData.properties.font_size || nestedHeaderContactDefaults.fontSize;
+                                                    nestedHeaderContactDefaults.fontFamily = compData.properties.font_family || nestedHeaderContactDefaults.fontFamily;
+                                                    nestedHeaderContactDefaults.fontWeight = compData.properties.font_weight || nestedHeaderContactDefaults.fontWeight;
+                                                    nestedHeaderContactDefaults.textTransform = compData.properties.text_transform || nestedHeaderContactDefaults.textTransform;
+                                                    nestedHeaderContactDefaults.letterSpacing = compData.properties.letter_spacing || nestedHeaderContactDefaults.letterSpacing;
+                                                    nestedHeaderContactDefaults.textDecoration = compData.properties.text_decoration || nestedHeaderContactDefaults.textDecoration;
+                                                    nestedHeaderContactDefaults.paddingTop = compData.properties.padding_top || nestedHeaderContactDefaults.paddingTop;
+                                                    nestedHeaderContactDefaults.paddingBottom = compData.properties.padding_bottom || nestedHeaderContactDefaults.paddingBottom;
+                                                    nestedHeaderContactDefaults.topOffset = compData.properties.top_offset || nestedHeaderContactDefaults.topOffset;
+                                                }
+
+                                                const nestedSavedHeaderContactData = (compData.headerContactTopbarData && typeof compData.headerContactTopbarData === 'object')
+                                                    ? compData.headerContactTopbarData
+                                                    : {};
+
+                                                nestedContent._headerContactTopbarData = {
+                                                    ...nestedHeaderContactDefaults,
+                                                    ...nestedSavedHeaderContactData
+                                                };
+
+                                                if (typeof nestedContent.renderHeaderContactTopbar === 'function') {
+                                                    nestedContent.renderHeaderContactTopbar();
+                                                }
+                                                break;
+                                            case 'header-investor-bar':
+                                                let nestedHeaderInvestorDefaults = {
+                                                    text: 'Exclusive access for investors',
+                                                    url: '#',
+                                                    bgColor: '#1e3a8a',
+                                                    textColor: '#ffffff',
+                                                    fontSize: '13px',
+                                                    fontFamily: 'Outfit',
+                                                    fontWeight: '500',
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '0px',
+                                                    textDecoration: 'none',
+                                                    paddingTop: '5px',
+                                                    paddingBottom: '4px',
+                                                    topOffset: '0px'
+                                                };
+
+                                                if (compData.properties) {
+                                                    nestedHeaderInvestorDefaults.text = compData.properties.investor_text || nestedHeaderInvestorDefaults.text;
+                                                    nestedHeaderInvestorDefaults.url = compData.properties.investor_url || nestedHeaderInvestorDefaults.url;
+                                                    nestedHeaderInvestorDefaults.bgColor = compData.properties.background_color || nestedHeaderInvestorDefaults.bgColor;
+                                                    nestedHeaderInvestorDefaults.textColor = compData.properties.text_color || nestedHeaderInvestorDefaults.textColor;
+                                                    nestedHeaderInvestorDefaults.fontSize = compData.properties.font_size || nestedHeaderInvestorDefaults.fontSize;
+                                                    nestedHeaderInvestorDefaults.fontFamily = compData.properties.font_family || nestedHeaderInvestorDefaults.fontFamily;
+                                                    nestedHeaderInvestorDefaults.fontWeight = compData.properties.font_weight || nestedHeaderInvestorDefaults.fontWeight;
+                                                    nestedHeaderInvestorDefaults.textTransform = compData.properties.text_transform || nestedHeaderInvestorDefaults.textTransform;
+                                                    nestedHeaderInvestorDefaults.letterSpacing = compData.properties.letter_spacing || nestedHeaderInvestorDefaults.letterSpacing;
+                                                    nestedHeaderInvestorDefaults.textDecoration = compData.properties.text_decoration || nestedHeaderInvestorDefaults.textDecoration;
+                                                    nestedHeaderInvestorDefaults.paddingTop = compData.properties.padding_top || nestedHeaderInvestorDefaults.paddingTop;
+                                                    nestedHeaderInvestorDefaults.paddingBottom = compData.properties.padding_bottom || nestedHeaderInvestorDefaults.paddingBottom;
+                                                    nestedHeaderInvestorDefaults.topOffset = compData.properties.top_offset || nestedHeaderInvestorDefaults.topOffset;
+                                                }
+
+                                                const nestedSavedInvestorBarData = (compData.headerInvestorBarData && typeof compData.headerInvestorBarData === 'object')
+                                                    ? compData.headerInvestorBarData
+                                                    : {};
+
+                                                nestedContent._headerInvestorBarData = {
+                                                    ...nestedHeaderInvestorDefaults,
+                                                    ...nestedSavedInvestorBarData
+                                                };
+
+                                                if (typeof nestedContent.renderHeaderInvestorBar === 'function') {
+                                                    nestedContent.renderHeaderInvestorBar();
+                                                }
+                                                break;
                       case 'invest-cta':
                         if (compData.investCtaData && Object.keys(compData.investCtaData).length > 0) {
                           nestedContent._investCtaData = compData.investCtaData;
@@ -18675,18 +19859,40 @@ function applyResponsiveStyles() {
     }
 
     function saveBuilderState() {
+            if (window.builderSaveInProgress) {
+                console.log('[saveBuilderState] Save already in progress, skipping duplicate call');
+                return;
+            }
+
       console.log('=== SAVE BUILDER STATE CALLED ===');
       id = document.getElementById('page_id').value;
       console.log('Page ID:', id);
 
       // Show loading state
       const saveButton = document.querySelector('.save-btn');
+            if (!saveButton) {
+                console.error('[saveBuilderState] Save button not found');
+                return;
+            }
+
+            window.builderSaveInProgress = true;
       const originalText = saveButton.innerHTML;
       saveButton.innerHTML = '<i class="bi bi-arrow-clockwise" style="animation: spin 1s linear infinite;"></i> Saving...';
       saveButton.disabled = true;
       saveButton.style.opacity = '0.7';
 
-      const state = serializeBuilder();
+            let state;
+            try {
+                state = serializeBuilder();
+            } catch (error) {
+                console.error('[saveBuilderState] Failed to serialize builder state:', error);
+                saveButton.innerHTML = originalText;
+                saveButton.disabled = false;
+                saveButton.style.opacity = '1';
+                window.builderSaveInProgress = false;
+                showErrorNotification('Save Failed', 'Unable to serialize page changes. Please try again.');
+                return;
+            }
       console.log('Serialized state:', state);
       console.log('State components count:', state.components ? state.components.length : 'no components');
       
@@ -18744,7 +19950,9 @@ function applyResponsiveStyles() {
       
       console.log('[saveBuilderState] Final background color value:', backgroundColor);
 
-      fetch('/admins/page/save/'+id, {
+            const saveUrl = window.builderSaveUrl || ('/admins/page/save/' + id);
+
+            fetch(saveUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
         body: JSON.stringify({ 
@@ -18775,6 +19983,7 @@ function applyResponsiveStyles() {
         saveButton.innerHTML = originalText;
         saveButton.disabled = false;
         saveButton.style.opacity = '1';
+                window.builderSaveInProgress = false;
       });
       
       console.log('=== END SAVE BUILDER STATE ===');
@@ -19697,10 +20906,13 @@ function applyResponsiveStyles() {
     });
 
     window.onload = function() {
+        window.builderIsHydrating = true;
 
         const id = document.getElementById('page_id').value;
 
-        fetch('/admins/page/load/'+id)
+        const loadUrl = window.builderLoadUrl || ('/admins/page/load/' + id);
+
+        fetch(loadUrl)
             .then(res => res.json())
             .then(data => {
             console.log('Raw page data loaded:', data);
@@ -19735,6 +20947,9 @@ function applyResponsiveStyles() {
                     historyManager.saveState('Page loaded');
                     console.log('History manager initialized');
                 }, 500);
+                setTimeout(() => {
+                    window.builderIsHydrating = false;
+                }, 800);
             } else {
                 console.log('No saved page found.');
                 // Initialize device preview even if no saved page
@@ -19750,18 +20965,22 @@ function applyResponsiveStyles() {
                     historyManager.saveState('Empty page loaded');
                     console.log('History manager initialized for empty page');
                 }, 100);
+                setTimeout(() => {
+                    window.builderIsHydrating = false;
+                }, 300);
             }
             })
             .catch(err => {
                 console.error('Load failed:', err);
                 alert('Load failed');
+                window.builderIsHydrating = false;
             });
             
         // Initialize page background color to match canvas
         const page = document.getElementById('page');
         if (page && page.style.backgroundColor) {
             const currentBgColor = page.style.backgroundColor;
-            updatePageBackground(currentBgColor);
+            updatePageBackground(currentBgColor, { skipAutoSave: true });
             const colorInput = document.getElementById('pageBackgroundColor');
             if (colorInput) {
                 // Convert rgb to hex if needed
@@ -19846,7 +21065,7 @@ function applyResponsiveStyles() {
     })();
 
     // Page Background Color Update Function
-    function updatePageBackground(color) {
+    function updatePageBackground(color, options = {}) {
         const page = document.getElementById('page');
         const canvas = document.getElementById('canvas');
         const root = document.documentElement;
@@ -19889,7 +21108,7 @@ function applyResponsiveStyles() {
         }
         
         // Trigger auto-save
-        if (typeof autoSavePage === 'function') {
+        if (!options.skipAutoSave && !window.builderIsHydrating && typeof autoSavePage === 'function') {
             setTimeout(autoSavePage, 100);
         }
     }
@@ -21012,11 +22231,26 @@ function initializeAllColumnSortables() {
 // Auto-save functionality
 function autoSavePage() {
     try {
-        const pageData = getPageState();
-        if (pageData && typeof savePage === 'function') {
-            savePage();
-            console.log('Page auto-saved after component drag');
+        if (window.builderIsHydrating || window.builderSaveInProgress) {
+            return;
         }
+
+        if (autoSaveTimeoutId) {
+            clearTimeout(autoSaveTimeoutId);
+        }
+
+        autoSaveTimeoutId = setTimeout(() => {
+            if (window.builderIsHydrating || window.builderSaveInProgress) {
+                return;
+            }
+
+            if (typeof saveBuilderState === 'function') {
+                saveBuilderState();
+            } else {
+                console.warn('Auto-save skipped: saveBuilderState is not available');
+            }
+            console.log('Page auto-saved after component drag using saveBuilderState');
+        }, 350);
     } catch (error) {
         console.error('Error auto-saving page:', error);
     }

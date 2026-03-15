@@ -8,6 +8,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\WebsiteController;
 use App\Http\Controllers\WebsitePaymentController;
 use App\Http\Controllers\Api\PageBuilderController;
+use App\Http\Controllers\HeaderFooterBuilderController;
 use App\Http\Controllers\AuthorizeNetController;
 use App\Http\Controllers\CoinbaseController;
 use App\Http\Controllers\TicketController;
@@ -728,6 +729,15 @@ Route::group(['prefix' => 'users', 'middleware' => 'auth'], function () {
 
     Route::get('/setting', [AdminController::class, 'index']);
 
+    // Website owner settings edit (restricted by controller-level ownership checks)
+    Route::get('/website/edit/{id}', [
+        WebsiteController::class, 'edit'
+    ])->name('users.website.edit');
+
+    Route::post('/website/update/{id}', [
+        WebsiteController::class, 'update'
+    ])->name('users.website.update');
+
     Route::get('/direct_deposit', [AdminController::class, 'direct_deposit']);
     Route::post('/direct_deposit/store', [AdminController::class, 'direct_deposit_store']);
 
@@ -928,6 +938,14 @@ Route::group(['prefix' => 'admins', 'middleware' => ['auth',admin::class]], func
     Route::post('/footer/store',[AdminController::class, 'store_footer'])->name('admin.footer.store');
 
     // Menu Builder Routes
+    Route::get('/header-builder/{websiteId}', [HeaderFooterBuilderController::class, 'headerEditor'])->name('admin.header-builder.edit');
+    Route::get('/header-builder/load/{websiteId}', [HeaderFooterBuilderController::class, 'loadHeader'])->name('admin.header-builder.load');
+    Route::post('/header-builder/save/{websiteId}', [HeaderFooterBuilderController::class, 'saveHeader'])->name('admin.header-builder.save');
+
+    Route::get('/footer-builder/{websiteId}', [HeaderFooterBuilderController::class, 'footerEditor'])->name('admin.footer-builder.edit');
+    Route::get('/footer-builder/load/{websiteId}', [HeaderFooterBuilderController::class, 'loadFooter'])->name('admin.footer-builder.load');
+    Route::post('/footer-builder/save/{websiteId}', [HeaderFooterBuilderController::class, 'saveFooter'])->name('admin.footer-builder.save');
+
     Route::prefix('menus')->name('admin.menus.')->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\MenuController::class, 'websites'])->name('index');
         Route::get('/website/{websiteId}', [\App\Http\Controllers\Admin\MenuController::class, 'index'])->name('list');
@@ -1315,43 +1333,49 @@ Route::post('/test-upload-video', function(Illuminate\Http\Request $request) {
 
 // --- Ticket Auth/Verification AJAX Endpoints ---
 Route::post('/ajax/ticket-auth/register', function(Request $request) {
+    // Resolve website first so we can scope the unique-email check
+    $websiteId = null;
+    try {
+        $domain    = parse_url(url()->current(), PHP_URL_HOST);
+        $check     = Website::where('domain', $domain)->first();
+        $websiteId = $check ? $check->id : null;
+    } catch (\Exception $e) { /* ignore */ }
+
     try {
         $request->validate([
-            'email' => 'required|email|unique:users,email',
+            'email'    => [
+                'required', 'email',
+                \Illuminate\Validation\Rule::unique('users')->where(
+                    fn ($q) => $q->where('website_id', $websiteId)
+                ),
+            ],
             'password' => 'required|min:6',
-            'name' => 'required|string|max:255'
+            'name'     => 'required|string|max:255',
         ]);
     } catch (\Illuminate\Validation\ValidationException $e) {
         $errors = $e->validator->errors()->all();
         return response()->json([
-            'success' => false, 
+            'success' => false,
             'message' => implode(' ', $errors)
         ], 422);
     }
-    
-    $user = User::where('email', $request->email)->first();
-    if ($user) {
+
+    // Double-check at the application layer (belt-and-suspenders)
+    $existing = User::where('email', $request->email)
+                    ->where('website_id', $websiteId)
+                    ->first();
+    if ($existing) {
         return response()->json(['success' => false, 'message' => 'Email already registered. Please login.'], 409);
     }
+
     $code = rand(100000, 999999);
     $user = User::create([
-        'email' => $request->email,
-        'password' => Hash::make($request->password),
-        'name' => $request->name,
-        'role' => 'customer',
+        'email'      => $request->email,
+        'password'   => Hash::make($request->password),
+        'name'       => $request->name,
+        'role'       => 'customer',
+        'website_id' => $websiteId,
     ]);
-    // assign website if found by domain
-    try {
-        $url = url()->current();
-        $domain = parse_url($url, PHP_URL_HOST);
-        $check = Website::where('domain', $domain)->first();
-        if ($check) {
-            $user->website_id = $check->id;
-            $user->save();
-        }
-    } catch (\Exception $e) {
-        // ignore website assignment
-    }
     // set verification code
     $user->email_verification_code = $code;
     $user->email_verified_at = null;
@@ -1365,11 +1389,18 @@ Route::post('/ajax/ticket-auth/register', function(Request $request) {
 
 Route::post('/ajax/ticket-auth/login', function(Request $request) {
     $request->validate([
-        'email' => 'required|email',
+        'email'    => 'required|email',
         'password' => 'required',
     ]);
-    $user = User::where('email', $request->email)->first();
-    if (!$user || !Hash::check($request->password, $user->password)) {
+    $user = null;
+    $candidates = User::where('email', $request->email)->get();
+    foreach ($candidates as $candidate) {
+        if (Hash::check($request->password, $candidate->password)) {
+            $user = $candidate;
+            break;
+        }
+    }
+    if (!$user) {
         return response()->json(['success' => false, 'message' => 'Invalid credentials.'], 401);
     }
     if (!$user->email_verified_at) {
@@ -1389,9 +1420,17 @@ Route::post('/ajax/ticket-auth/login', function(Request $request) {
 Route::post('/ajax/ticket-auth/verify', function(Request $request) {
     $request->validate([
         'email' => 'required|email',
-        'code' => 'required',
+        'code'  => 'required',
     ]);
-    $user = User::where('email', $request->email)->first();
+    $websiteId = null;
+    try {
+        $domain    = parse_url(url()->current(), PHP_URL_HOST);
+        $site      = Website::where('domain', $domain)->first();
+        $websiteId = $site ? $site->id : null;
+    } catch (\Exception $e) { /* ignore */ }
+    $user = User::where('email', $request->email)
+                ->where('website_id', $websiteId)
+                ->first();
     if (!$user || $user->email_verification_code !== $request->code) {
         return response()->json(['success' => false, 'message' => 'Invalid verification code.'], 422);
     }
@@ -1406,9 +1445,17 @@ Route::post('/ajax/ticket-auth/verify', function(Request $request) {
 // Resend verification code
 Route::post('/ajax/ticket-auth/resend-code', function(Request $request) {
     $request->validate([
-        'email' => 'required|email'
+        'email' => 'required|email',
     ]);
-    $user = User::where('email', $request->email)->first();
+    $websiteId = null;
+    try {
+        $domain    = parse_url(url()->current(), PHP_URL_HOST);
+        $site      = Website::where('domain', $domain)->first();
+        $websiteId = $site ? $site->id : null;
+    } catch (\Exception $e) { /* ignore */ }
+    $user = User::where('email', $request->email)
+                ->where('website_id', $websiteId)
+                ->first();
     if (!$user) {
         return response()->json(['success' => false, 'message' => 'User not found.'], 404);
     }
@@ -1453,7 +1500,15 @@ use Illuminate\Support\Carbon;
 
 Route::post('/ajax/ticket-auth/forgot-request', function(Request $request) {
     $request->validate(['email' => 'required|email']);
-    $user = \App\Models\User::where('email', $request->email)->first();
+    $websiteId = null;
+    try {
+        $domain    = parse_url(url()->current(), PHP_URL_HOST);
+        $site      = \App\Models\Website::where('domain', $domain)->first();
+        $websiteId = $site ? $site->id : null;
+    } catch (\Exception $e) { /* ignore */ }
+    $user = \App\Models\User::where('email', $request->email)
+                            ->where('website_id', $websiteId)
+                            ->first();
     if (!$user) {
         return response()->json(['success' => false, 'message' => 'No user found with that email.'], 404);
     }
@@ -1470,9 +1525,17 @@ Route::post('/ajax/ticket-auth/forgot-request', function(Request $request) {
 Route::post('/ajax/ticket-auth/forgot-verify', function(Request $request) {
     $request->validate([
         'email' => 'required|email',
-        'code' => 'required',
+        'code'  => 'required',
     ]);
-    $user = \App\Models\User::where('email', $request->email)->first();
+    $websiteId = null;
+    try {
+        $domain    = parse_url(url()->current(), PHP_URL_HOST);
+        $site      = \App\Models\Website::where('domain', $domain)->first();
+        $websiteId = $site ? $site->id : null;
+    } catch (\Exception $e) { /* ignore */ }
+    $user = \App\Models\User::where('email', $request->email)
+                            ->where('website_id', $websiteId)
+                            ->first();
     if (!$user || !$user->password_reset_code || !$user->password_reset_expires) {
         return response()->json(['success' => false, 'message' => 'No reset request found.'], 404);
     }
@@ -1487,11 +1550,19 @@ Route::post('/ajax/ticket-auth/forgot-verify', function(Request $request) {
 
 Route::post('/ajax/ticket-auth/forgot-reset', function(Request $request) {
     $request->validate([
-        'email' => 'required|email',
-        'code' => 'required',
+        'email'    => 'required|email',
+        'code'     => 'required',
         'password' => 'required|min:6',
     ]);
-    $user = \App\Models\User::where('email', $request->email)->first();
+    $websiteId = null;
+    try {
+        $domain    = parse_url(url()->current(), PHP_URL_HOST);
+        $site      = \App\Models\Website::where('domain', $domain)->first();
+        $websiteId = $site ? $site->id : null;
+    } catch (\Exception $e) { /* ignore */ }
+    $user = \App\Models\User::where('email', $request->email)
+                            ->where('website_id', $websiteId)
+                            ->first();
     if (!$user || !$user->password_reset_code || !$user->password_reset_expires) {
         return response()->json(['success' => false, 'message' => 'No reset request found.'], 404);
     }

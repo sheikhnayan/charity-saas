@@ -86,7 +86,7 @@ label{
                         <div class="row">
                             <div class="col-lg">
                                 <div class="card-shadow-primary card-border text-white mb-3 card bg-primary" style="background: #fff !important;">
-                                    <form action="{{ route('admin.website.update',[$data->id]) }}" method="post">
+                                    <form action="{{ auth()->check() && auth()->user()->role === 'user' ? route('users.website.update',[$data->id]) : route('admin.website.update',[$data->id]) }}" method="post">
                                         @csrf
                                         <div class="card-body">
                                             <div class="row">
@@ -102,17 +102,19 @@ label{
                                                         <input type="text" name="last_name" class="form-control" id="last_name" placeholder="Last Name" value="{{ $data->user->last_name ?? '' }}" required>
                                                     </div>
                                                 </div>
-                                                <div class="col-md-12">
-                                                    <div class="mb-3">
-                                                        <label for="type" class="form-label">Website Type</label>
-                                                        <select name="type" class="form-control" id="type" required>
-                                                            <option value="">Select Website Type</option>
-                                                            <option value="fundraiser" {{ $data->type == 'fundraiser' ? 'selected' : '' }}>Fundraiser</option>
-                                                            <option value="investment" {{ $data->type == 'investment' ? 'selected' : '' }}>Investment</option>
-                                                        </select>
-                                                        <small class="form-text text-muted">Choose whether this website is for fundraising or investment purposes.</small>
+                                                @if(!auth()->check() || auth()->user()->role !== 'user')
+                                                    <div class="col-md-12">
+                                                        <div class="mb-3">
+                                                            <label for="type" class="form-label">Website Type</label>
+                                                            <select name="type" class="form-control" id="type" required>
+                                                                <option value="">Select Website Type</option>
+                                                                <option value="fundraiser" {{ $data->type == 'fundraiser' ? 'selected' : '' }}>Fundraiser</option>
+                                                                <option value="investment" {{ $data->type == 'investment' ? 'selected' : '' }}>Investment</option>
+                                                            </select>
+                                                            <small class="form-text text-muted">Choose whether this website is for fundraising or investment purposes.</small>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                @endif
                                                 <div class="col-md-6">
                                                     <div class="mb-3">
                                                         <label for="email" class="form-label">Email</label>
@@ -134,14 +136,16 @@ label{
                                                 </div>
                                             </div>
 
-                                            <div class="row">
-                                                <div class="col-md-12">
-                                                    <div class="mb-3">
-                                                        <label for="name" class="form-label">Domain</label>
-                                                        <input type="text" name="domain" value="{{ $data->domain }}" class="form-control" id="name" placeholder="Website Name" required>
+                                            @if(!auth()->check() || auth()->user()->role !== 'user')
+                                                <div class="row">
+                                                    <div class="col-md-12">
+                                                        <div class="mb-3">
+                                                            <label for="name" class="form-label">Domain</label>
+                                                            <input type="text" name="domain" value="{{ $data->domain }}" class="form-control" id="name" placeholder="Website Name" required>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
+                                            @endif
 
                                             <div class="row">
                                                 <div class="col-md-12">
@@ -462,7 +466,7 @@ label{
                                                 </div> --}}
                                             </div>
                                             <button type="submit" class="btn btn-primary">Submit</button>
-                                            <a href="{{ route('admin.website.index') }}" class="btn btn-danger">Cancel</a>
+                                            <a href="{{ auth()->check() && auth()->user()->role === 'user' ? url('/users/setting') : route('admin.website.index') }}" class="btn btn-danger">Cancel</a>
 
                                         </div>
 

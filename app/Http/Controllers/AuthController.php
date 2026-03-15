@@ -16,9 +16,21 @@ class AuthController extends Controller
 {
     public function login(Request $request)
     {
-        $credentials = $request->only('email', 'password');
+        // Login is intentionally global across websites.
+        // If the same email exists on multiple websites, we authenticate against
+        // the first account whose stored password matches the submitted password.
+        $user = null;
+        $candidates = User::where('email', $request->email)->get();
+        foreach ($candidates as $candidate) {
+            if (\Hash::check($request->password, $candidate->password)) {
+                $user = $candidate;
+                break;
+            }
+        }
 
-        if (Auth::attempt($credentials)) {
+        if ($user) {
+            Auth::login($user);
+            $request->session()->regenerate();
             $user = Auth::user();
             
             if ($user) {
@@ -27,12 +39,12 @@ class AuthController extends Controller
                     Auth::logout();
                     return redirect('/')->with('error', 'Your account is pending approval. Please wait for administrator approval before logging in.');
                 }
-                
+
                 // Check if redirect_to parameter is provided (e.g., from page-investment)
                 if ($request->has('redirect_to') && $request->redirect_to) {
                     return redirect($request->redirect_to)->with('success', 'Login successful');
                 }
-                
+
                 if ($user->role == 'admin') {
                     return redirect()->intended('/admins')->with('success', 'Login successful');
                 } else {
@@ -47,9 +59,22 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         // dd($request->all());
+        // Resolve website early so we can scope the email-unique rule
+        $url     = url()->current();
+        $doamin  = parse_url($url, PHP_URL_HOST);
+        $check   = Website::where('domain', $doamin)->first();
+
+        $websiteId = $check ? $check->id : null;
+
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users|same:confirm_email',
+            'name'     => 'required|string|max:255',
+            'email'    => [
+                'required', 'string', 'email', 'max:255', 'same:confirm_email',
+                // Unique per-website: same email is allowed on a different website
+                \Illuminate\Validation\Rule::unique('users')->where(
+                    fn ($q) => $q->where('website_id', $websiteId)
+                ),
+            ],
             'password' => 'required|string|min:8|same:confirm_password',
         ]);
 
@@ -59,12 +84,9 @@ class AuthController extends Controller
             $teacher_id = $request->teacher_id;
         }
 
-        $url = url()->current();
-        if( $url == 'fundably.org' || $url == 'https://fundably.org' || $url == 'http://fundably.org' || $url == 'http://127.0.0.1:8000') {
+        if ($url == 'fundably.org' || $url == 'https://fundably.org' || $url == 'http://fundably.org' || $url == 'http://127.0.0.1:8000') {
             return redirect()->route('admin.index', 1);
         }
-        $doamin = parse_url($url, PHP_URL_HOST);
-        $check = Website::where('domain', $doamin)->first();
 
         $user = User::create([
             'name' => $request->name,

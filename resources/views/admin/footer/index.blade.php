@@ -92,19 +92,20 @@
                                         <tbody>
                                             @if ($data->isEmpty())
                                                 <tr>
-                                                    <td colspan="1" class="text-center">No data found.</td>
-                                                    <td colspan="1" class="text-center">No data found.</td>
-                                                    <td colspan="1" class="text-center">No data found.</td>
-                                                    <td colspan="1" class="text-center">No data found.</td>
+                                                    <td colspan="4" class="text-center">No data found.</td>
                                                 </tr>
                                             @else
                                                 @foreach ($data as $key => $item)
                                                     <tr>
                                                         <td>{{ $key + 1 }}</td>
-                                                        <td>{{ $item->setting->website->name ?? 'Main Website'}}</td>
-                                                        <td>{{ $item->setting->website->domain ?? 'Main Website'}}</td>
+                                                        <td>{{ $item->name ?? 'Main Website' }}</td>
+                                                        <td>{{ $item->domain ?? 'Main Website' }}</td>
                                                         <td>
-                                                            <a href="/admins/footer/{{ $item->id }}" class="btn btn-primary">Edit</a>
+                                                            @if($item->user_id)
+                                                                <a href="/admins/footer/{{ $item->user_id }}" class="btn btn-primary">Edit</a>
+                                                            @else
+                                                                <span class="badge bg-secondary">User Missing</span>
+                                                            @endif
                                                         </td>
                                                     </tr>
                                                 @endforeach

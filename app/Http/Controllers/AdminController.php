@@ -269,6 +269,7 @@ class AdminController extends Controller
     public function store_menu(Request $request)
     {
         $data = Header::where('id', $request->id)->first();
+        $data->use_builder = 0;
         $data->status = $request->status;
         $data->color = $request->color;
         $data->background = $request->background;
@@ -377,6 +378,7 @@ class AdminController extends Controller
     public function store_footer(Request $request)
     {
         $data = Footer::where('id', $request->id)->first();
+        $data->use_builder = 0;
         $data->status = $request->status;
         $data->color = $request->color;
         $data->privacy = $request->privacy ?? 1; // Default to 1 if not provided
@@ -1163,15 +1165,44 @@ class AdminController extends Controller
 
     public function menu_index()
     {
-        $data = Header::get();
+        $data = Website::with('header')->orderBy('id')->get();
 
         return view('admin.menu.index', compact('data'));
     }
 
     public function footer($id)
     {
-        $data = Footer::where('user_id',$id)->first();
+        // Support both legacy user_id route param and website_id fallback.
         $website = Website::where('user_id', $id)->first();
+        if (!$website) {
+            $website = Website::find($id);
+        }
+
+        if (!$website) {
+            abort(404, 'Website not found for footer editor.');
+        }
+
+        $data = Footer::where('website_id', $website->id)->first();
+        if (!$data) {
+            $data = new Footer;
+            $data->user_id = $website->user_id;
+            $data->website_id = $website->id;
+            $data->status = 0;
+            $data->color = '#000';
+            $data->background = '#fff';
+            $data->menu = 1;
+            $data->social = 0;
+            $data->facebook = '#';
+            $data->instagram = '#';
+            $data->twitter = '#';
+            $data->linkedin = '#';
+            $data->youtube = '#';
+            $data->pinterest = '#';
+            $data->tiktok = '#';
+            $data->blue_sky = '#';
+            $data->save();
+        }
+
         $customFonts = \App\Models\CustomFont::active()->get();
         
         // Get all pages for this website
@@ -1184,7 +1215,7 @@ class AdminController extends Controller
 
     public function footer_index()
     {
-        $data = User::where('role','user')->latest()->get();
+        $data = Website::with('footer')->orderBy('id')->get();
 
         return view('admin.footer.index', compact('data'));
     }

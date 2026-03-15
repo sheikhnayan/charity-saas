@@ -13,6 +13,13 @@
                         <form action="{{ route('admin.menu.store') }}" method="POST" enctype="multipart/form-data">
                             @csrf
                             <input type="hidden" name="id" value="{{$data->id}}">
+                            @if(!empty($website) && !empty($website->id))
+                                <div class="mb-3">
+                                    <a href="{{ route('admin.header-builder.edit', $website->id) }}" class="btn btn-primary">
+                                        <i class="fa-solid fa-screwdriver-wrench me-1"></i> Open Header Builder
+                                    </a>
+                                </div>
+                            @endif
                             <div class="row gy-3" bis_skin_checked="1">
 
                                 <div class="col-md-6 col-lg-4" data-step="1" data-title="Header status"

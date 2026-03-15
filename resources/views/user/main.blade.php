@@ -547,6 +547,17 @@
                     </a>
                 </li>
 
+                @if(Auth::user()->website_id)
+                <li class="menu-item {{ request()->is('users/website/edit/*') ? 'active' : '' }}">
+                  <a
+                  href="{{ route('users.website.edit', Auth::user()->website_id) }}"
+                  class="menu-link">
+                  <i class="menu-icon tf-icons bx bx-globe"></i>
+                  <div class="text-truncate" data-i18n="Website">Website Settings</div>
+                  </a>
+                </li>
+                @endif
+
                 <li class="menu-item {{ request()->is('users/notifications') ? 'active' : '' }}">
                     <a
                     href="/users/notifications"

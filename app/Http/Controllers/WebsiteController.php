@@ -13,6 +13,7 @@ use App\Models\DirectDeposit;
 use App\Models\MailedCheck;
 use App\Models\WireTransfer;
 use App\Models\Tax;
+use App\Services\HeaderFooterBuilderService;
 use Auth;
 use Hash;
 
@@ -39,7 +40,7 @@ class WebsiteController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(Request $request, HeaderFooterBuilderService $builderService)
     {
         // Validate the request
         $validation = [
@@ -172,6 +173,8 @@ class WebsiteController extends Controller
             $footer->blue_sky = '#';
             $footer->save();
 
+            $builderService->seedDefaultsForWebsite($add);
+
             $n = new DirectDeposit;
             $n->user_id = $user->id;
             $n->save();
@@ -232,7 +235,8 @@ class WebsiteController extends Controller
      */
     public function edit(string $id)
     {
-        $data = Website::find($id);
+        $data = Website::findOrFail($id);
+        $this->authorizeWebsiteAccess($data);
         return view('admin.website.edit', compact('data'));
     }
 
@@ -241,14 +245,19 @@ class WebsiteController extends Controller
      */
     public function update(Request $request, string $id)
     {
+        $website = Website::findOrFail($id);
+        $this->authorizeWebsiteAccess($website);
+
+        $isWebsiteOwner = Auth::check() && Auth::user()->role === 'user';
+
         // Validate the request
         $validation = [
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'email' => 'required|email',
             'name' => 'required|string|max:255',
-            'domain' => 'required|string|max:255',
-            'type' => 'required|in:fundraiser,investment',
+            'domain' => $isWebsiteOwner ? 'sometimes|nullable|string|max:255' : 'required|string|max:255',
+            'type' => $isWebsiteOwner ? 'sometimes|nullable|in:fundraiser,investment' : 'required|in:fundraiser,investment',
             'status' => 'required|in:0,1',
         ];
         // Only validate password if present
@@ -257,10 +266,15 @@ class WebsiteController extends Controller
         }
         $request->validate($validation);
 
-        $update = Website::find($id);
+        $update = $website;
         $update->name = $request->name;
-        $update->domain = $request->domain;
-        $update->type = $request->type;
+
+        // Website owners can edit settings but cannot change website routing/type.
+        if (!$isWebsiteOwner) {
+            $update->domain = $request->domain;
+            $update->type = $request->type;
+        }
+
         $update->status = $request->status;
         $update->custom_sticky_button_text = $request->custom_sticky_button_text;
         // Add investment fields for all website types
@@ -320,7 +334,34 @@ class WebsiteController extends Controller
             $user->update();
         }
 
+        if ($isWebsiteOwner) {
+            return redirect('/users/setting')->with('success', 'Website updated successfully.');
+        }
+
         return redirect()->route('admin.website.index')->with('success', 'Website updated successfully.');
+    }
+
+    protected function authorizeWebsiteAccess(Website $website): void
+    {
+        if (!Auth::check()) {
+            abort(401);
+        }
+
+        $user = Auth::user();
+        if ($user->role === 'admin') {
+            return;
+        }
+
+        if ($user->role === 'user') {
+            $ownsByWebsiteId = !empty($user->website_id) && (int) $user->website_id === (int) $website->id;
+            $ownsByOwnerId = (int) $website->user_id === (int) $user->id;
+
+            if ($ownsByWebsiteId || $ownsByOwnerId) {
+                return;
+            }
+        }
+
+        abort(403, 'You do not have permission to edit this website.');
     }
 
     /**
