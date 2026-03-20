@@ -81,11 +81,18 @@ class FrontendController extends Controller
     {
 
         $url = url()->current();
-        if( $url == 'http://brandallco.com' || $url == 'brandallco.com' || $url == 'https://brandallco.com' || $url == 'http://127.0.0.1:8000') {
+        $domain = parse_url($url, PHP_URL_HOST);
+        $mainSiteUrls = [
+            'brandallco.com',
+            'www.brandallco.com',
+            '127.0.0.1',
+        ];
+
+        if (in_array($domain, $mainSiteUrls, true)) {
             // return redirect()->route('admin.index', 1);
            return $this->dealmakerDemo();
         }
-        $doamin = parse_url($url, PHP_URL_HOST);
+        $doamin = $domain;
         // dd($doamin);
         $check = Website::where('domain', $doamin)->first();
         $user_id = $check->user_id;
