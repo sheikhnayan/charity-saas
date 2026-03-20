@@ -9524,7 +9524,7 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                 $weightUnit = $scrap['weightUnit'] ?? 'grams';
                 $defaultWeight = $scrap['defaultWeight'] ?? '10';
                 $defaultPurity = $scrap['defaultPurity'] ?? '18';
-                if (!in_array((string) $defaultPurity, ['24', '22', '21', '18'], true)) {
+                if (!in_array((string) $defaultPurity, ['24', '22', '21', '18', '14', '10'], true)) {
                     $defaultPurity = '18';
                 }
                 $showLivePrices = isset($scrap['showLivePrices']) ? (bool) $scrap['showLivePrices'] : true;
@@ -9638,42 +9638,55 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
 
                     #{{ $componentId }}-scrap .scrap-prices {
                         margin-top: 24px;
-                        display: grid;
-                        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-                        gap: 14px;
+                        display: block;
                         position: relative;
                         z-index: 2;
                     }
 
                     #{{ $componentId }}-scrap .price-card {
-                        border: 2px solid #e2e8f0;
-                        border-radius: 14px;
-                        background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
-                        padding: 14px;
-                        transition: all 0.3s ease;
-                        text-align: center;
+                        border: 1px solid rgba(212, 175, 55, 0.35);
+                        border-radius: 16px;
+                        background: linear-gradient(135deg, #fffef8 0%, #fff9e9 100%);
+                        padding: 16px 18px;
+                        transition: all 0.25s ease;
+                        display: grid;
+                        grid-template-columns: 1fr auto auto;
+                        align-items: center;
+                        gap: 14px;
                     }
 
                     #{{ $componentId }}-scrap .price-card:hover {
-                        border-color: #d4af37;
-                        box-shadow: 0 10px 30px rgba(212, 175, 55, 0.15);
+                        border-color: rgba(212, 175, 55, 0.65);
+                        box-shadow: 0 10px 28px rgba(212, 175, 55, 0.18);
                         transform: translateY(-2px);
                     }
 
                     #{{ $componentId }}-scrap .price-card .metal {
-                        font-size: 12px;
+                        font-size: 13px;
                         text-transform: uppercase;
-                        color: #718096;
-                        font-weight: 700;
-                        letter-spacing: 0.5px;
-                        display: block;
-                        margin-bottom: 6px;
+                        color: #7a5a00;
+                        font-weight: 800;
+                        letter-spacing: 0.7px;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 6px;
+                    }
+
+                    #{{ $componentId }}-scrap .price-card .metal::before {
+                        content: '';
+                        width: 9px;
+                        height: 9px;
+                        border-radius: 50%;
+                        background: linear-gradient(135deg, #f3c63a 0%, #c79000 100%);
+                        box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.18);
                     }
 
                     #{{ $componentId }}-scrap .price-card .value {
-                        font-size: 18px;
+                        font-size: 16px;
                         font-weight: 800;
-                        background: linear-gradient(135deg, #d4af37 0%, #c99d25 100%);
+                        text-align: right;
+                        min-width: 120px;
+                        background: linear-gradient(135deg, #d4af37 0%, #a97800 100%);
                         -webkit-background-clip: text;
                         -webkit-text-fill-color: transparent;
                         background-clip: text;
@@ -9688,23 +9701,29 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                         position: relative;
                         z-index: 2;
                         box-shadow: 0 12px 32px rgba(212, 175, 55, 0.1);
+                        display: grid;
+                        row-gap: 10px;
                     }
 
-                    #{{ $componentId }}-scrap .result .label {
+                    #{{ $componentId }}-scrap .result .result-label {
                         font-size: 12px;
                         color: #b8860b;
-                        margin-bottom: 8px;
                         font-weight: 700;
                         text-transform: uppercase;
-                        letter-spacing: 0.5px;
+                        letter-spacing: 0.7px;
+                        line-height: 1.25;
+                        margin: 0;
                     }
 
-                    #{{ $componentId }}-scrap .result .amount {
+                    #{{ $componentId }}-scrap .result .result-amount {
                         font-size: 36px;
                         font-weight: 900;
                         color: #b8860b;
-                        line-height: 1.2;
+                        line-height: 1.05;
                         letter-spacing: -1px;
+                        margin: 0;
+                        position: relative;
+                        z-index: 1;
                     }
 
                     #{{ $componentId }}-scrap .meta {
@@ -9739,12 +9758,21 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                             font-size: 24px;
                         }
 
-                        #{{ $componentId }}-scrap .scrap-toolbar,
-                        #{{ $componentId }}-scrap .scrap-prices {
+                        #{{ $componentId }}-scrap .scrap-toolbar {
                             grid-template-columns: 1fr;
                         }
 
-                        #{{ $componentId }}-scrap .result .amount {
+                        #{{ $componentId }}-scrap .price-card {
+                            grid-template-columns: 1fr;
+                            text-align: left;
+                        }
+
+                        #{{ $componentId }}-scrap .price-card .value {
+                            text-align: left;
+                            min-width: 0;
+                        }
+
+                        #{{ $componentId }}-scrap .result .result-amount {
                             font-size: 28px;
                         }
                     }
@@ -9794,8 +9822,8 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                 @endif
 
                 <div class="result">
-                    <div class="label">Estimated Payout</div>
-                    <div class="amount" id="{{ $componentId }}-result">$0.00</div>
+                    <div class="result-label">Estimated Payout</div>
+                    <div class="result-amount" id="{{ $componentId }}-result">$0.00</div>
                     <div class="calc-breakdown" id="{{ $componentId }}-calc-breakdown">Enter values to calculate</div>
                     <div class="meta">
                         <span id="{{ $componentId }}-rate">Loading live price...</span>
@@ -9888,12 +9916,14 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
 
                     function renderCards() {
                         if (!showCards || !elCards) return;
+                        const metal = elMetal ? elMetal.value : defaultMetal;
+                        const perGram = getAdjustedRate(prices.gram[metal], metal);
+                        const perOunce = getAdjustedRate(prices.ounce[metal], metal);
 
-                        elCards.innerHTML = allowedMetals.map((metal) => {
-                            const perGram = getAdjustedRate(prices.gram[metal], metal);
-                            const value = perGram ? `${formatMoney(perGram)}/g` : 'N/A';
-                            return `<div class="price-card"><div class="metal">${metal}</div><div class="value">${value}</div></div>`;
-                        }).join('');
+                        const gramText = perGram ? `${formatMoney(perGram)}/g` : 'N/A /g';
+                        const ounceText = perOunce ? `${formatMoney(perOunce)}/oz` : 'N/A /oz';
+
+                        elCards.innerHTML = `<div class="price-card"><div class="metal">Live ${metal} price</div><div class="value">${gramText}</div><div class="value">${ounceText}</div></div>`;
                     }
 
                     function calculate() {
@@ -9939,6 +9969,8 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                                 ? `Live ${metal} rate: ${formatMoney(rate)}${suffix}`
                                 : `Live ${metal} rate unavailable`;
                         }
+
+                        renderCards();
 
                         // Show/hide purity selector based on metal type
                         const purityContainer = document.getElementById('{{ $componentId }}-purity-container');
