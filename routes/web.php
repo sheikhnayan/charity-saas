@@ -126,24 +126,35 @@ Route::get('/api/metals/prices', function () {
                 'Cache-Control' => 'no-cache',
             ]);
 
-        $goldcalcUrl = 'https://www.goldcalc.com/';
-        $debugLog[] = 'SOURCE gold: ' . $goldcalcUrl;
-        try {
-            $response = $http->get($goldcalcUrl);
-            $debugLog[] = 'SCRAPE goldcalc: HTTP ' . $response->status();
+        $goldcalcSources = [
+            'https://www.goldcalc.com/',
+            'https://r.jina.ai/http://www.goldcalc.com/',
+            'https://r.jina.ai/http://goldcalc.com/',
+        ];
 
-            if ($response->ok()) {
+        $goldPerOunce = null;
+        foreach ($goldcalcSources as $idx => $goldcalcUrl) {
+            $sourceLabel = $idx === 0 ? 'gold' : 'gold-mirror';
+            $debugLog[] = 'SOURCE ' . $sourceLabel . ': ' . $goldcalcUrl;
+
+            try {
+                $response = $http->get($goldcalcUrl);
+                $debugLog[] = 'SCRAPE goldcalc: HTTP ' . $response->status();
+
+                if (!$response->ok()) {
+                    continue;
+                }
+
                 $html = $response->body();
-                $goldPerOunce = null;
 
-                // Prefer the basis value (per troy ounce) from the scrap gold table if available.
+                // Prefer explicit basis value (per troy ounce).
                 if (preg_match('/Basis:\s*\$\s*([0-9,]+(?:\.[0-9]+)?)\s*\/\s*troy\s*ounce/i', $html, $basisMatch)) {
                     $goldPerOunce = (float) str_replace(',', '', $basisMatch[1]);
                     $debugLog[] = 'SCRAPE goldcalc basis: ' . $goldPerOunce . ' oz';
                 }
 
-                // Fallback: convert 24K per-gram value to per-ounce.
-                if ($goldPerOunce === null && preg_match('/24K\s*\([^\)]*\)\s*<\/td>\s*<td[^>]*>\s*\$\s*([0-9,]+(?:\.[0-9]+)?)\s*\/\s*gram/i', $html, $gramMatch)) {
+                // Fallback: convert 24K per-gram value to per-ounce (supports HTML or flattened text forms).
+                if ($goldPerOunce === null && preg_match('/24K(?:\s*\([^\)]*\))?[^$]{0,120}\$\s*([0-9,]+(?:\.[0-9]+)?)\s*\/\s*gram/i', $html, $gramMatch)) {
                     $goldPerGram = (float) str_replace(',', '', $gramMatch[1]);
                     $goldPerOunce = round($goldPerGram * 31.1034768, 2);
                     $debugLog[] = 'SCRAPE goldcalc 24k: ' . $goldPerGram . ' g -> ' . $goldPerOunce . ' oz';
@@ -159,12 +170,14 @@ Route::get('/api/metals/prices', function () {
                     } else {
                         $debugLog[] = 'SCRAPE gold: rejected ' . $goldPerOunce . '/oz outside range';
                     }
-                } else {
-                    $debugLog[] = 'SCRAPE goldcalc: no parseable gold price found';
+
+                    break;
                 }
+
+                $debugLog[] = 'SCRAPE goldcalc: no parseable gold price found';
+            } catch (\Throwable $e) {
+                $debugLog[] = 'SCRAPE goldcalc exception: ' . substr($e->getMessage(), 0, 220);
             }
-        } catch (\Throwable $e) {
-            $debugLog[] = 'SCRAPE goldcalc exception: ' . substr($e->getMessage(), 0, 220);
         }
 
         $sourceUrl = 'https://www.dailymetalprice.com/';
@@ -183,7 +196,7 @@ Route::get('/api/metals/prices', function () {
                     'palladium' => 'palladium',
                 ];
 
-                $pattern = '#<tr[^>]*>\s*<td[^>]*>\s*<a[^>]*>([^<]+)</a>\s*</td>\s*<td[^>]*>\s*\$\s*([0-9,]+(?:\.[0-9]+)?)\s*<span[^>]*>\s*([a-zA-Z]+)\s*</span>#is';
+                $pattern = '#<tr[^>]*>\s*<td[^>]*>\s*(?:<a[^>]*>)?\s*([^<]+?)\s*(?:</a>)?\s*</td>\s*<td[^>]*>\s*\$\s*([0-9,]+(?:\.[0-9]+)?)\s*(?:<span[^>]*>)?\s*([a-zA-Z]+)\s*(?:</span>)?\s*</td>#is';
                 if (preg_match_all($pattern, $html, $matches, PREG_SET_ORDER)) {
                     foreach ($matches as $m) {
                         $name = strtolower(trim($m[1] ?? ''));
