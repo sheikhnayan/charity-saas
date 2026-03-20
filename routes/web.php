@@ -57,8 +57,8 @@ Route::get('/api/teachers', [\App\Http\Controllers\Admin\TeacherController::clas
 
 // Public metals price API (used by scrap calculator component)
 Route::get('/api/metals/prices', function () {
-    $cacheKey = 'metals_scrape_prices_usd_v4';
-    $lastGoodKey = 'metals_scrape_last_good_usd_v4';
+    $cacheKey = 'metals_scrape_prices_usd_v5';
+    $lastGoodKey = 'metals_scrape_last_good_usd_v5';
 
     $payload = \Illuminate\Support\Facades\Cache::remember($cacheKey, 120, function () use ($lastGoodKey) {
         $debugLog = [];

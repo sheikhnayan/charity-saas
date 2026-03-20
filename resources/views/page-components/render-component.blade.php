@@ -9983,7 +9983,15 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                         try {
                             console.log('🔄 [Metals API] Fetching prices from:', '{{ route('api.metals.prices') }}');
                             
-                            const response = await fetch('{{ route('api.metals.prices') }}', { headers: { 'Accept': 'application/json' } });
+                            const apiUrl = '{{ route('api.metals.prices') }}' + '?_ts=' + Date.now();
+                            const response = await fetch(apiUrl, {
+                                cache: 'no-store',
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                                    'Pragma': 'no-cache'
+                                }
+                            });
                             
                             console.log('📥 [Metals API] Response status:', response.status, response.statusText);
                             
