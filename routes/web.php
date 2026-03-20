@@ -126,8 +126,49 @@ Route::get('/api/metals/prices', function () {
                 'Cache-Control' => 'no-cache',
             ]);
 
+        $goldcalcUrl = 'https://www.goldcalc.com/';
+        $debugLog[] = 'SOURCE gold: ' . $goldcalcUrl;
+        try {
+            $response = $http->get($goldcalcUrl);
+            $debugLog[] = 'SCRAPE goldcalc: HTTP ' . $response->status();
+
+            if ($response->ok()) {
+                $html = $response->body();
+                $goldPerOunce = null;
+
+                // Prefer the basis value (per troy ounce) from the scrap gold table if available.
+                if (preg_match('/Basis:\s*\$\s*([0-9,]+(?:\.[0-9]+)?)\s*\/\s*troy\s*ounce/i', $html, $basisMatch)) {
+                    $goldPerOunce = (float) str_replace(',', '', $basisMatch[1]);
+                    $debugLog[] = 'SCRAPE goldcalc basis: ' . $goldPerOunce . ' oz';
+                }
+
+                // Fallback: convert 24K per-gram value to per-ounce.
+                if ($goldPerOunce === null && preg_match('/24K\s*\([^\)]*\)\s*<\/td>\s*<td[^>]*>\s*\$\s*([0-9,]+(?:\.[0-9]+)?)\s*\/\s*gram/i', $html, $gramMatch)) {
+                    $goldPerGram = (float) str_replace(',', '', $gramMatch[1]);
+                    $goldPerOunce = round($goldPerGram * 31.1034768, 2);
+                    $debugLog[] = 'SCRAPE goldcalc 24k: ' . $goldPerGram . ' g -> ' . $goldPerOunce . ' oz';
+                }
+
+                if ($goldPerOunce !== null) {
+                    [$min, $max] = $ranges['gold'];
+                    if ($goldPerOunce >= $min && $goldPerOunce <= $max) {
+                        $normalized['gold'] = round($goldPerOunce, 2);
+                        $freshScraped['gold'] = $normalized['gold'];
+                        $hasScraped = true;
+                        $debugLog[] = 'SCRAPE gold: accepted ' . $normalized['gold'] . ' oz';
+                    } else {
+                        $debugLog[] = 'SCRAPE gold: rejected ' . $goldPerOunce . '/oz outside range';
+                    }
+                } else {
+                    $debugLog[] = 'SCRAPE goldcalc: no parseable gold price found';
+                }
+            }
+        } catch (\Throwable $e) {
+            $debugLog[] = 'SCRAPE goldcalc exception: ' . substr($e->getMessage(), 0, 220);
+        }
+
         $sourceUrl = 'https://www.dailymetalprice.com/';
-        $debugLog[] = 'SOURCE all-metals: ' . $sourceUrl;
+        $debugLog[] = 'SOURCE non-gold metals: ' . $sourceUrl;
         try {
             $response = $http->get($sourceUrl);
             $debugLog[] = 'SCRAPE dailymetalprice: HTTP ' . $response->status();
@@ -154,6 +195,11 @@ Route::get('/api/metals/prices', function () {
                         }
 
                         $metal = $map[$name];
+                        if ($metal === 'gold') {
+                            // Gold is sourced from goldcalc.com in this endpoint.
+                            continue;
+                        }
+
                         $pricePerOunce = $toOunce($rawPrice, $unit);
                         if ($pricePerOunce === null) {
                             $debugLog[] = "SCRAPE {$metal}: unsupported unit {$unit}";

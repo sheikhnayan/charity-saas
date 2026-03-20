@@ -9785,6 +9785,19 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                             <option value="18" {{ ($defaultPurity === '18' || !$defaultPurity) ? 'selected' : '' }}>18K (75.0%)</option>
                             <option value="14" {{ $defaultPurity === '14' ? 'selected' : '' }}>14K (58.3%)</option>
                             <option value="10" {{ $defaultPurity === '10' ? 'selected' : '' }}>10K (41.7%)</option>
+                        </select>
+                    </div>
+                </div>
+
+                @if($showLivePrices)
+                    <div class="scrap-prices" id="{{ $componentId }}-price-cards"></div>
+                @endif
+
+                <div class="result">
+                    <div class="label">Estimated Payout</div>
+                    <div class="amount" id="{{ $componentId }}-result">$0.00</div>
+                    <div class="calc-breakdown" id="{{ $componentId }}-calc-breakdown">Enter values to calculate</div>
+                    <div class="meta">
                         <span id="{{ $componentId }}-rate">Loading live price...</span>
                         <span id="{{ $componentId }}-updated">--</span>
                     </div>
