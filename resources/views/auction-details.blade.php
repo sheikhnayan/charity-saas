@@ -177,8 +177,23 @@
         $footer = \App\Models\Footer::where('website_id', $check->id)->first();
         $setting = \App\Models\Setting::where('user_id', $check->user_id)->first();
         $user = \App\Models\User::where('id', $check->user_id)->first();
+        $headerBuilderState = $header && !empty($header->builder_state) ? json_decode($header->builder_state, true) : null;
+        $headerBuilderComponents = (is_array($headerBuilderState) && isset($headerBuilderState['components']) && is_array($headerBuilderState['components']))
+            ? $headerBuilderState['components']
+            : [];
+        $useHeaderBuilder = (bool) ($header && $header->use_builder);
     @endphp
-    @if ($header->status == 1)
+    @if($useHeaderBuilder)
+        @include('builders.render-header-builder', [
+            'components' => $headerBuilderComponents,
+            'header' => $header,
+            'website' => $check,
+            'setting' => $setting,
+            'menuSections' => [],
+            'customFonts' => collect(),
+            'isPreview' => false,
+        ])
+    @elseif ($header && $header->status == 1)
         @include('layouts.nav')
     @endif
     <main class="c-content c-content--anon c-content--ai-full" id="main" style="margin-top: 7rem; background-color: {{ $pageBackgroundColor }} !important;">

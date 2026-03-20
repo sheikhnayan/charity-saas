@@ -94,8 +94,23 @@ $groups = \App\Models\User::where('website_id', $check->id)->where('role', 'grou
 $header = \App\Models\Header::where('website_id', $check->id)->first();
 $setting = \App\Models\Setting::where('user_id', $check->user_id)->first();
 $user = \App\Models\User::where('id', $check->user_id)->first();
+$headerBuilderState = $header && !empty($header->builder_state) ? json_decode($header->builder_state, true) : null;
+$headerBuilderComponents = (is_array($headerBuilderState) && isset($headerBuilderState['components']) && is_array($headerBuilderState['components']))
+    ? $headerBuilderState['components']
+    : [];
+$useHeaderBuilder = (bool) ($header && $header->use_builder);
     @endphp
-    @if ($header->status == 1)
+    @if($useHeaderBuilder)
+        @include('builders.render-header-builder', [
+            'components' => $headerBuilderComponents,
+            'header' => $header,
+            'website' => $check,
+            'setting' => $setting,
+            'menuSections' => [],
+            'customFonts' => collect(),
+            'isPreview' => false,
+        ])
+    @elseif ($header && $header->status == 1)
         @include('layouts.nav')
     @endif
     <main style="padding: 5rem; padding-top: 0rem; margin-top: 7rem; max-width: 90em; margin-left: auto; margin-right: auto; background-color: #fff;">

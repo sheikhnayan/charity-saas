@@ -549,9 +549,29 @@ $state = $data && $data->state ? (is_string($data->state) ? json_decode($data->s
 
         $header = \App\Models\Header::where('website_id', $check->id)->first();
         $footer = \App\Models\Footer::where('website_id', $check->id)->first();
+        $headerBuilderState = $header && !empty($header->builder_state) ? json_decode($header->builder_state, true) : null;
+        $headerBuilderComponents = (is_array($headerBuilderState) && isset($headerBuilderState['components']) && is_array($headerBuilderState['components']))
+            ? $headerBuilderState['components']
+            : [];
+        $footerBuilderState = $footer && !empty($footer->builder_state) ? json_decode($footer->builder_state, true) : null;
+        $footerBuilderComponents = (is_array($footerBuilderState) && isset($footerBuilderState['components']) && is_array($footerBuilderState['components']))
+            ? $footerBuilderState['components']
+            : [];
+        $useHeaderBuilder = (bool) ($header && $header->use_builder);
+        $useFooterBuilder = (bool) ($footer && $footer->use_builder);
     @endphp
     
-    @if ($header && $header->status == 1)
+    @if($useHeaderBuilder)
+        @include('builders.render-header-builder', [
+            'components' => $headerBuilderComponents,
+            'header' => $header,
+            'website' => $check,
+            'setting' => $setting,
+            'menuSections' => [],
+            'customFonts' => $customFonts ?? collect(),
+            'isPreview' => false,
+        ])
+    @elseif ($header && $header->status == 1)
         @include('layouts.nav')
     @endif
     
@@ -2914,7 +2934,16 @@ $state = $data && $data->state ? (is_string($data->state) ? json_decode($data->s
     </div>
   </div>
 </div>
-@if ($footer)
+@if($useFooterBuilder)
+@include('builders.render-footer-builder', [
+    'components' => $footerBuilderComponents,
+    'footer' => $footer,
+    'website' => $check,
+    'setting' => $setting,
+    'customFonts' => $customFonts ?? collect(),
+    'isPreview' => false,
+])
+@elseif ($footer)
 @if ($footer->status == 1)
 <footer class="standard-client-footer text-white bg-primary" data-footer="" style="
 background-color: {{ $footer->background }} !important;

@@ -336,10 +336,30 @@
         $header = \App\Models\Header::where('website_id', $check->id)->first();
         $footer = \App\Models\Footer::where('website_id', $check->id)->first();
         $setting = \App\Models\Setting::where('user_id', $check->user_id)->first();
+        $headerBuilderState = $header && !empty($header->builder_state) ? json_decode($header->builder_state, true) : null;
+        $headerBuilderComponents = (is_array($headerBuilderState) && isset($headerBuilderState['components']) && is_array($headerBuilderState['components']))
+            ? $headerBuilderState['components']
+            : [];
+        $footerBuilderState = $footer && !empty($footer->builder_state) ? json_decode($footer->builder_state, true) : null;
+        $footerBuilderComponents = (is_array($footerBuilderState) && isset($footerBuilderState['components']) && is_array($footerBuilderState['components']))
+            ? $footerBuilderState['components']
+            : [];
+        $useHeaderBuilder = (bool) ($header && $header->use_builder);
+        $useFooterBuilder = (bool) ($footer && $footer->use_builder);
         // dd($data->amount);
 
     @endphp
-    @if ($header->status == 1)
+    @if($useHeaderBuilder)
+        @include('builders.render-header-builder', [
+            'components' => $headerBuilderComponents,
+            'header' => $header,
+            'website' => $check,
+            'setting' => $setting,
+            'menuSections' => [],
+            'customFonts' => $customFonts ?? collect(),
+            'isPreview' => false,
+        ])
+    @elseif ($header && $header->status == 1)
         @include('layouts.nav')
     @endif
     <div class="container mb-4">
@@ -837,7 +857,16 @@
             </div>
         </div>
     </div>
-    @if ($footer && $footer->status == 1)
+    @if($useFooterBuilder)
+        @include('builders.render-footer-builder', [
+            'components' => $footerBuilderComponents,
+            'footer' => $footer,
+            'website' => $check,
+            'setting' => $setting,
+            'customFonts' => $customFonts ?? collect(),
+            'isPreview' => false,
+        ])
+    @elseif ($footer && $footer->status == 1)
         @include('layouts.new-footer')
     @elseif ($footer && $footer->status == 1)
             <footer class="standard-client-footer text-white bg-primary" data-footer="" style="

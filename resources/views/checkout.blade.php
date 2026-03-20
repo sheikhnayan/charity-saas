@@ -16,6 +16,16 @@
     $paymentSettings = $website?->paymentSettings ?? \App\Models\PaymentSetting::find(1);
     $tippingEnabled = $paymentSettings?->tipping_enabled ?? true;
     $coinbaseEnabled = $paymentSettings?->coinbase_enabled ?? false;
+    $headerBuilderState = $header && !empty($header->builder_state) ? json_decode($header->builder_state, true) : null;
+    $headerBuilderComponents = (is_array($headerBuilderState) && isset($headerBuilderState['components']) && is_array($headerBuilderState['components']))
+        ? $headerBuilderState['components']
+        : [];
+    $footerBuilderState = $footer && !empty($footer->builder_state) ? json_decode($footer->builder_state, true) : null;
+    $footerBuilderComponents = (is_array($footerBuilderState) && isset($footerBuilderState['components']) && is_array($footerBuilderState['components']))
+        ? $footerBuilderState['components']
+        : [];
+    $useHeaderBuilder = (bool) ($header && $header->use_builder);
+    $useFooterBuilder = (bool) ($footer && $footer->use_builder);
 @endphp
 
 <!DOCTYPE html>
@@ -521,7 +531,17 @@
 </head>
 
 <body style="background-color:#f9fafb; margin:0; padding:0;">
-    @if ($header && $header->status == 1)
+    @if($useHeaderBuilder)
+        @include('builders.render-header-builder', [
+            'components' => $headerBuilderComponents,
+            'header' => $header,
+            'website' => $check,
+            'setting' => $setting,
+            'menuSections' => [],
+            'customFonts' => $customFonts,
+            'isPreview' => false,
+        ])
+    @elseif ($header && $header->status == 1)
         @if($header->show_contact_topbar)
             <div class="contact-topbar" style="background: {{ $header->contact_topbar_bg_color ?? '#000000' }}; padding: 8px 0; font-size: 14px; height: 35px;">
                 <div class="container">
@@ -1571,7 +1591,16 @@ function hidePaymentLoader() {
     @if ($check && ($check->is_main_site ?? 0) == 1)
         @include('layouts.main_footer')
     @else
-        @if ($footer && $footer->status == 1)
+        @if($useFooterBuilder)
+            @include('builders.render-footer-builder', [
+                'components' => $footerBuilderComponents,
+                'footer' => $footer,
+                'website' => $check,
+                'setting' => $setting,
+                'customFonts' => $customFonts,
+                'isPreview' => false,
+            ])
+        @elseif ($footer && $footer->status == 1)
             @include('layouts.new-footer')
         @endif
     @endif

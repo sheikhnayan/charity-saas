@@ -1392,6 +1392,12 @@ h5, .ql-header-5 {
                 $htmlContent = $component['customHtmlData']['htmlContent'] ?? $component['properties']['htmlContent'] ?? '<div style="padding: 20px; text-align: center;"><h3>Custom HTML Content</h3><p>Add your custom HTML code in the page builder</p></div>';
                 $height = $component['customHtmlData']['height'] ?? $component['properties']['height'] ?? '300';
                 $iframeId = 'custom-html-' . uniqid();
+                // Custom HTML should size to its content, so strip inherited height caps.
+                $customHtmlStyleStr = preg_replace('/(?:^|;)\s*(?:height|min-height|max-height|overflow(?:-[xy])?)\s*:[^;]*;?/i', ';', $styleStr);
+                $customHtmlStyleStr = trim(preg_replace('/\s*;\s*/', ';', $customHtmlStyleStr), ';');
+                if ($customHtmlStyleStr !== '') {
+                    $customHtmlStyleStr .= ';';
+                }
                 
                 // Inject base styles for iframe normalization
                 $iframeBaseStyle = "<style>html { font-size: 10px; }</style>";
@@ -1453,11 +1459,11 @@ h5, .ql-header-5 {
                 $htmlContentWithScript = $iframeBaseStyle . $htmlContent . $linkHandlerScript;
             @endphp
             
-            <div class="custom-html-component" id="{{ $componentId }}" style="{{ $styleStr }}">
+            <div class="custom-html-component" id="{{ $componentId }}" style="{{ $customHtmlStyleStr }}overflow: visible; margin-top: 30px !important;">
                 <iframe 
                     id="{{ $iframeId }}"
                     srcdoc="{!! htmlspecialchars($htmlContentWithScript) !!}" 
-                    style="width: 100%; border: none; display: block;"
+                    style="width: 100%; border: none; display: block; max-height: none;"
                     sandbox="allow-scripts allow-same-origin allow-top-navigation allow-popups"
                     scrolling="no"
                     loading="lazy"
@@ -1483,6 +1489,32 @@ h5, .ql-header-5 {
                                     }
 
                                     var measuredHeight = bodyHeight > 0 ? bodyHeight : documentHeight;
+                                    if (doc.body && doc.body.querySelectorAll) {
+                                        var scrollTop = 0;
+                                        if (iframe.contentWindow && typeof iframe.contentWindow.pageYOffset === 'number') {
+                                            scrollTop = iframe.contentWindow.pageYOffset;
+                                        } else if (doc.documentElement) {
+                                            scrollTop = doc.documentElement.scrollTop || 0;
+                                        }
+
+                                        var maxBottom = 0;
+                                        var elements = doc.body.querySelectorAll('*');
+                                        elements.forEach(function(node) {
+                                            if (!node || !node.getBoundingClientRect) {
+                                                return;
+                                            }
+                                            var rect = node.getBoundingClientRect();
+                                            if (rect && isFinite(rect.bottom)) {
+                                                var bottom = Math.ceil(rect.bottom + scrollTop);
+                                                if (bottom > maxBottom) {
+                                                    maxBottom = bottom;
+                                                }
+                                            }
+                                        });
+
+                                        measuredHeight = Math.max(measuredHeight, maxBottom);
+                                    }
+
                                     var fallbackHeight = parseInt('{{ $height }}', 10) || 0;
                                     var height = measuredHeight > 0 ? measuredHeight : fallbackHeight;
                                     if (height <= 0) {
@@ -9519,121 +9551,192 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
             <div class="scrap-calc-shell" id="{{ $componentId }}-scrap" style="{{ $styleStr }}">
                 <style>
                     #{{ $componentId }}-scrap {
-                        border: 1px solid rgba(15, 23, 42, 0.08);
-                        border-radius: 16px;
-                        background: linear-gradient(160deg, #ffffff 0%, #f8fafc 100%);
-                        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
-                        padding: 22px;
+                        border: none;
+                        border-radius: 20px;
+                        background: linear-gradient(135deg, #ffffff 0%, #f7fafc 100%);
+                        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.06);
+                        padding: 32px;
+                        position: relative;
+                        overflow: hidden;
+                    }
+
+                    #{{ $componentId }}-scrap::before {
+                        content: '';
+                        position: absolute;
+                        top: 0;
+                        right: -40%;
+                        width: 600px;
+                        height: 600px;
+                        background: radial-gradient(circle, rgba(218, 165, 32, 0.08) 0%, transparent 70%);
+                        border-radius: 50%;
+                        pointer-events: none;
+                    }
+
+                    #{{ $componentId }}-scrap .scrap-header {
+                        position: relative;
+                        z-index: 2;
+                        margin-bottom: 28px;
+                        border-bottom: 2px solid rgba(218, 165, 32, 0.2);
+                        padding-bottom: 20px;
                     }
 
                     #{{ $componentId }}-scrap .scrap-header h3 {
                         margin: 0;
-                        font-size: 24px;
-                        font-weight: 700;
-                        color: #0f172a;
+                        font-size: 28px;
+                        font-weight: 800;
+                        color: #1a202c;
+                        letter-spacing: -0.5px;
                     }
 
                     #{{ $componentId }}-scrap .scrap-header p {
-                        margin: 8px 0 0;
-                        color: #64748b;
-                        font-size: 14px;
+                        margin: 10px 0 0;
+                        color: #718096;
+                        font-size: 15px;
+                        font-weight: 500;
                     }
 
                     #{{ $componentId }}-scrap .scrap-toolbar {
                         display: grid;
-                        grid-template-columns: repeat(2, minmax(0, 1fr));
-                        gap: 12px;
-                        margin-top: 16px;
+                        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                        gap: 16px;
+                        margin-top: 24px;
+                        position: relative;
+                        z-index: 2;
                     }
 
                     #{{ $componentId }}-scrap .scrap-field label {
                         display: block;
-                        font-size: 12px;
-                        color: #334155;
-                        margin-bottom: 6px;
-                        font-weight: 600;
+                        font-size: 13px;
+                        color: #2d3748;
+                        margin-bottom: 8px;
+                        font-weight: 700;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
                     }
 
                     #{{ $componentId }}-scrap .scrap-field select,
                     #{{ $componentId }}-scrap .scrap-field input {
                         width: 100%;
-                        border: 1px solid #cbd5e1;
-                        border-radius: 10px;
-                        padding: 10px 12px;
-                        font-size: 14px;
-                        background: #fff;
+                        border: 2px solid #e2e8f0;
+                        border-radius: 12px;
+                        padding: 12px 14px;
+                        font-size: 15px;
+                        font-weight: 500;
+                        background: #ffffff;
+                        color: #2d3748;
+                        transition: all 0.3s ease;
+                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+                    }
+
+                    #{{ $componentId }}-scrap .scrap-field select:focus,
+                    #{{ $componentId }}-scrap .scrap-field input:focus {
+                        outline: none;
+                        border-color: #d4af37;
+                        box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1), 0 2px 8px rgba(0, 0, 0, 0.04);
+                        background: linear-gradient(to bottom, #ffffff, #fffbf7);
                     }
 
                     #{{ $componentId }}-scrap .scrap-prices {
-                        margin-top: 16px;
+                        margin-top: 24px;
                         display: grid;
-                        grid-template-columns: repeat(2, minmax(0, 1fr));
-                        gap: 10px;
+                        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+                        gap: 14px;
+                        position: relative;
+                        z-index: 2;
                     }
 
                     #{{ $componentId }}-scrap .price-card {
-                        border: 1px solid #e2e8f0;
-                        border-radius: 12px;
-                        background: #fff;
-                        padding: 10px;
+                        border: 2px solid #e2e8f0;
+                        border-radius: 14px;
+                        background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+                        padding: 14px;
+                        transition: all 0.3s ease;
+                        text-align: center;
+                    }
+
+                    #{{ $componentId }}-scrap .price-card:hover {
+                        border-color: #d4af37;
+                        box-shadow: 0 10px 30px rgba(212, 175, 55, 0.15);
+                        transform: translateY(-2px);
                     }
 
                     #{{ $componentId }}-scrap .price-card .metal {
                         font-size: 12px;
-                        text-transform: capitalize;
-                        color: #475569;
+                        text-transform: uppercase;
+                        color: #718096;
+                        font-weight: 700;
+                        letter-spacing: 0.5px;
+                        display: block;
+                        margin-bottom: 6px;
                     }
 
                     #{{ $componentId }}-scrap .price-card .value {
-                        font-size: 16px;
-                        font-weight: 700;
-                        color: #0f766e;
+                        font-size: 18px;
+                        font-weight: 800;
+                        background: linear-gradient(135deg, #d4af37 0%, #c99d25 100%);
+                        -webkit-background-clip: text;
+                        -webkit-text-fill-color: transparent;
+                        background-clip: text;
                     }
 
                     #{{ $componentId }}-scrap .result {
-                        margin-top: 16px;
-                        border: 1px solid #99f6e4;
-                        background: linear-gradient(160deg, #ecfeff 0%, #f0fdfa 100%);
-                        border-radius: 12px;
-                        padding: 14px;
+                        margin-top: 28px;
+                        border: 2px solid #d4af37;
+                        background: linear-gradient(135deg, #fffbf7 0%, #fffcfa 100%);
+                        border-radius: 16px;
+                        padding: 22px;
+                        position: relative;
+                        z-index: 2;
+                        box-shadow: 0 12px 32px rgba(212, 175, 55, 0.1);
                     }
 
                     #{{ $componentId }}-scrap .result .label {
                         font-size: 12px;
-                        color: #0f766e;
-                        margin-bottom: 4px;
+                        color: #b8860b;
+                        margin-bottom: 8px;
+                        font-weight: 700;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
                     }
 
                     #{{ $componentId }}-scrap .result .amount {
-                        font-size: 28px;
-                        font-weight: 800;
-                        color: #115e59;
-                        line-height: 1.1;
+                        font-size: 36px;
+                        font-weight: 900;
+                        color: #b8860b;
+                        line-height: 1.2;
+                        letter-spacing: -1px;
                     }
 
                     #{{ $componentId }}-scrap .meta {
-                        margin-top: 8px;
+                        margin-top: 14px;
                         font-size: 12px;
-                        color: #64748b;
+                        color: #718096;
                         display: flex;
                         justify-content: space-between;
-                        gap: 10px;
+                        gap: 12px;
                         flex-wrap: wrap;
+                        padding-top: 14px;
+                        border-top: 1px solid rgba(212, 175, 55, 0.1);
                     }
 
                     #{{ $componentId }}-scrap .calc-breakdown {
-                        margin-top: 8px;
-                        font-size: 12px;
-                        color: #0f766e;
-                        background: #f0fdfa;
-                        border: 1px dashed #99f6e4;
-                        border-radius: 8px;
-                        padding: 8px 10px;
+                        margin-top: 12px;
+                        font-size: 13px;
+                        color: #b8860b;
+                        background: linear-gradient(135deg, #fffdf9 0%, #fffcf9 100%);
+                        border: 2px dashed rgba(212, 175, 55, 0.3);
+                        border-radius: 10px;
+                        padding: 10px 12px;
+                        font-weight: 600;
                     }
 
                     @media (max-width: 768px) {
                         #{{ $componentId }}-scrap {
-                            padding: 16px;
+                            padding: 22px;
+                        }
+
+                        #{{ $componentId }}-scrap .scrap-header h3 {
+                            font-size: 24px;
                         }
 
                         #{{ $componentId }}-scrap .scrap-toolbar,
@@ -9642,7 +9745,7 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                         }
 
                         #{{ $componentId }}-scrap .result .amount {
-                            font-size: 24px;
+                            font-size: 28px;
                         }
                     }
                 </style>
@@ -9665,6 +9768,7 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                         <label>Unit</label>
                         <select id="{{ $componentId }}-unit">
                             <option value="grams" {{ $weightUnit === 'grams' ? 'selected' : '' }}>Grams (g)</option>
+                            <option value="kilograms" {{ $weightUnit === 'kilograms' ? 'selected' : '' }}>Kilograms (kg)</option>
                             <option value="ounces" {{ $weightUnit === 'ounces' ? 'selected' : '' }}>Troy Ounces (oz)</option>
                         </select>
                     </div>
@@ -9672,26 +9776,15 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                         <label>Weight</label>
                         <input id="{{ $componentId }}-weight" type="number" min="0" step="0.01" value="{{ $defaultWeight }}">
                     </div>
-                    <div class="scrap-field">
+                    <div class="scrap-field" id="{{ $componentId }}-purity-container">
                         <label>Purity (Karats)</label>
                         <select id="{{ $componentId }}-purity">
                             <option value="24" {{ $defaultPurity === '24' ? 'selected' : '' }}>24K (100%)</option>
                             <option value="22" {{ $defaultPurity === '22' ? 'selected' : '' }}>22K (91.6%)</option>
                             <option value="21" {{ $defaultPurity === '21' ? 'selected' : '' }}>21K (87.5%)</option>
                             <option value="18" {{ ($defaultPurity === '18' || !$defaultPurity) ? 'selected' : '' }}>18K (75.0%)</option>
-                        </select>
-                    </div>
-                </div>
-
-                @if($showLivePrices)
-                    <div class="scrap-prices" id="{{ $componentId }}-price-cards"></div>
-                @endif
-
-                <div class="result">
-                    <div class="label" style="color: #fff !Important">Estimated Scrap Value (USD)</div>
-                    <div class="amount" id="{{ $componentId }}-result">$0.00</div>
-                    <div class="calc-breakdown" id="{{ $componentId }}-calc-breakdown">Waiting for price and inputs...</div>
-                    <div class="meta">
+                            <option value="14" {{ $defaultPurity === '14' ? 'selected' : '' }}>14K (58.3%)</option>
+                            <option value="10" {{ $defaultPurity === '10' ? 'selected' : '' }}>10K (41.7%)</option>
                         <span id="{{ $componentId }}-rate">Loading live price...</span>
                         <span id="{{ $componentId }}-updated">--</span>
                     </div>
@@ -9747,6 +9840,8 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                             '22': 0.916,
                             '21': 0.875,
                             '18': 0.75,
+                            '14': 0.583,
+                            '10': 0.417,
                         };
                         return Object.prototype.hasOwnProperty.call(map, key) ? map[key] : 0.75;
                     }
@@ -9758,8 +9853,24 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                             '22': '91.6',
                             '21': '87.5',
                             '18': '75.0',
+                            '14': '58.3',
+                            '10': '41.7',
                         };
                         return Object.prototype.hasOwnProperty.call(labels, key) ? labels[key] : '75.0';
+                    }
+
+                    function convertWeightToGrams(weight, unit) {
+                        const val = parseFloat(weight) || 0;
+                        if (unit === 'kilograms') return val * 1000;
+                        if (unit === 'ounces') return val * 31.1035;
+                        return val; // grams
+                    }
+
+                    function convertWeightToOunces(weight, unit) {
+                        const val = parseFloat(weight) || 0;
+                        if (unit === 'grams') return val / 31.1035;
+                        if (unit === 'kilograms') return val * 32.1507;
+                        return val; // ounces
                     }
 
                     function renderCards() {
@@ -9779,9 +9890,23 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                         const purityCode = elPurity ? elPurity.value : '18';
                         const purityRatio = getPurityRatio(purityCode);
 
-                        const rawRate = unit === 'ounces' ? prices.ounce[metal] : prices.gram[metal];
-                        const rate = getAdjustedRate(rawRate, metal);
-                        const estimated = (rate || 0) * weight * purityRatio;
+                        // Determine which price to use and convert weight accordingly
+                        let rate = 0;
+                        let useOuncePrice = false;
+                        
+                        if (unit === 'ounces') {
+                            rate = getAdjustedRate(prices.ounce[metal], metal);
+                            useOuncePrice = true;
+                        } else {
+                            // For grams or kilograms, use gram price
+                            const weightInGrams = convertWeightToGrams(weight, unit);
+                            rate = getAdjustedRate(prices.gram[metal], metal);
+                        }
+
+                        const weightInGrams = convertWeightToGrams(weight, unit);
+                        const weightInOunces = convertWeightToOunces(weight, unit);
+                        const rawRate = useOuncePrice ? prices.ounce[metal] : prices.gram[metal];
+                        const estimated = (rate || 0) * (useOuncePrice ? weight : weightInGrams) * purityRatio;
 
                         if (elResult) {
                             elResult.textContent = formatMoney(estimated);
@@ -9789,9 +9914,10 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
 
                         if (elBreakdown) {
                             const purityPct = getPurityPercentLabel(purityCode);
+                            const displayWeight = unit === 'kilograms' ? weight + ' kg' : unit === 'ounces' ? weight + ' oz' : weight + ' g';
                             const suffix = unit === 'ounces' ? '/oz' : '/g';
                             const safeRate = rate || 0;
-                            elBreakdown.textContent = `${weight} ${unit} x ${formatMoney(safeRate)}${suffix} x ${purityPct}% = ${formatMoney(estimated)}`;
+                            elBreakdown.textContent = `${displayWeight} x ${formatMoney(safeRate)}${suffix} x ${purityPct}% = ${formatMoney(estimated)}`;
                         }
 
                         if (elRate) {
@@ -9799,6 +9925,12 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                             elRate.textContent = rate
                                 ? `Live ${metal} rate: ${formatMoney(rate)}${suffix}`
                                 : `Live ${metal} rate unavailable`;
+                        }
+
+                        // Show/hide purity selector based on metal type
+                        const purityContainer = document.getElementById('{{ $componentId }}-purity-container');
+                        if (purityContainer) {
+                            purityContainer.style.display = metal === 'gold' ? 'block' : 'none';
                         }
                     }
 
@@ -9851,7 +9983,9 @@ Extracted Video Data: {{ json_encode($videoData, JSON_PRETTY_PRINT) }}</pre>
                                     : data.source === 'stale'
                                     ? '⚠ Last Known Data'
                                     : '⚠ Approximate Data';
-                                elUpdated.textContent = `Updated: ${stamp.toLocaleTimeString()} (${sourceLabel})`;
+                                const dateStr = stamp.toLocaleDateString();
+                                const timeStr = stamp.toLocaleTimeString();
+                                elUpdated.textContent = `Updated: ${dateStr} at ${timeStr} (${sourceLabel})`;
                             }
                         } catch (error) {
                             console.error('❌ [Metals API] Price load failed:', error);

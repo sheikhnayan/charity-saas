@@ -864,11 +864,31 @@
         $footer = \App\Models\Footer::where('user_id', $user_id)->first();
         $setting = \App\Models\Setting::where('user_id', $user_id)->first();
         $menuSections = [];
+        $headerBuilderState = $header && !empty($header->builder_state) ? json_decode($header->builder_state, true) : null;
+        $headerBuilderComponents = (is_array($headerBuilderState) && isset($headerBuilderState['components']) && is_array($headerBuilderState['components']))
+            ? $headerBuilderState['components']
+            : [];
+        $footerBuilderState = $footer && !empty($footer->builder_state) ? json_decode($footer->builder_state, true) : null;
+        $footerBuilderComponents = (is_array($footerBuilderState) && isset($footerBuilderState['components']) && is_array($footerBuilderState['components']))
+            ? $footerBuilderState['components']
+            : [];
+        $useHeaderBuilder = (bool) ($header && $header->use_builder);
+        $useFooterBuilder = (bool) ($footer && $footer->use_builder);
         // dd($header->show_contact_topbar);
     @endphp
     
     <!-- Header -->
-   @if ($header && $header->status == 1)
+   @if($useHeaderBuilder)
+        @include('builders.render-header-builder', [
+            'components' => $headerBuilderComponents,
+            'header' => $header,
+            'website' => $check,
+            'setting' => $setting,
+            'menuSections' => $menuSections,
+            'customFonts' => $customFonts ?? collect(),
+            'isPreview' => false,
+        ])
+    @elseif ($header && $header->status == 1)
         {{-- Contact Information Top Bar --}}
         @if($header && $header->show_contact_topbar)
             <div class="contact-topbar" style="background: {{ $header->contact_topbar_bg_color ?? '#000000' }}; padding: 8px 0; font-size: 14px; height: 35px;">
@@ -2549,7 +2569,16 @@
     </script>
 
     <!-- Footer -->
-    @if ($footer && $footer->status == 1)
+    @if($useFooterBuilder)
+        @include('builders.render-footer-builder', [
+            'components' => $footerBuilderComponents,
+            'footer' => $footer,
+            'website' => $check,
+            'setting' => $setting,
+            'customFonts' => $customFonts ?? collect(),
+            'isPreview' => false,
+        ])
+    @elseif ($footer && $footer->status == 1)
         @include('layouts.new-footer')
     @endif
 

@@ -20,6 +20,16 @@
         $groups = collect();
         $user = null;
     }
+    $headerBuilderState = $header && !empty($header->builder_state) ? json_decode($header->builder_state, true) : null;
+    $headerBuilderComponents = (is_array($headerBuilderState) && isset($headerBuilderState['components']) && is_array($headerBuilderState['components']))
+        ? $headerBuilderState['components']
+        : [];
+    $footerBuilderState = $footer && !empty($footer->builder_state) ? json_decode($footer->builder_state, true) : null;
+    $footerBuilderComponents = (is_array($footerBuilderState) && isset($footerBuilderState['components']) && is_array($footerBuilderState['components']))
+        ? $footerBuilderState['components']
+        : [];
+    $useHeaderBuilder = (bool) ($header && $header->use_builder);
+    $useFooterBuilder = (bool) ($footer && $footer->use_builder);
 @endphp
 
 <html lang="en">
@@ -229,7 +239,17 @@
 
 <body style="padding: 0px">
     @endphp
-    @if ($header->status == 1)
+    @if($useHeaderBuilder)
+        @include('builders.render-header-builder', [
+            'components' => $headerBuilderComponents,
+            'header' => $header,
+            'website' => $check,
+            'setting' => $setting,
+            'menuSections' => [],
+            'customFonts' => $customFonts ?? collect(),
+            'isPreview' => false,
+        ])
+    @elseif ($header && $header->status == 1)
         @include('layouts.nav')
     @endif
     <header class="site-header" id="header" style="padding-top: 8rem;">
@@ -274,7 +294,16 @@
     </div>
 
     <!-- Footer -->
-    @if ($footer && $footer->status == 1)
+    @if($useFooterBuilder)
+        @include('builders.render-footer-builder', [
+            'components' => $footerBuilderComponents,
+            'footer' => $footer,
+            'website' => $check,
+            'setting' => $setting,
+            'customFonts' => $customFonts ?? collect(),
+            'isPreview' => false,
+        ])
+    @elseif ($footer && $footer->status == 1)
         @include('layouts.new-footer')
     @endif
 
