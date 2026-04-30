@@ -30,7 +30,8 @@ window.ShoppingCart = {
     // Configuration
     config: {
         apiBaseUrl: '/api/cart',
-        cartStorageKey: 'shopping_cart_ui_state'
+        cartStorageKey: 'shopping_cart_ui_state',
+        hideFloatingCartIcon: false
     },
 
     // State
@@ -49,6 +50,9 @@ window.ShoppingCart = {
         console.log('🛒 [CART] document.body exists:', !!document.body);
         
         try {
+            // Resolve website-specific cart UI behavior.
+            await this.loadCartConfig();
+
             // Create cart drawer HTML if it doesn't exist
             console.log('🛒 [CART] Creating cart drawer...');
             this.createCartDrawer();
@@ -81,6 +85,44 @@ window.ShoppingCart = {
         } catch (error) {
             console.error('❌ [CART] Error during initialization:', error);
             console.error('❌ [CART] Stack:', error.stack);
+        }
+    },
+
+    async loadCartConfig() {
+        try {
+            const response = await fetch(`${this.config.apiBaseUrl}/config`, {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                return;
+            }
+
+            const data = await response.json();
+            this.config.hideFloatingCartIcon = !!data.hide_floating_cart_icon;
+
+            if (this.config.hideFloatingCartIcon) {
+                this.hideFloatingCartButtons();
+            }
+        } catch (error) {
+            console.warn('⚠️ [CART] Failed to load cart config:', error.message);
+        }
+    },
+
+    hideFloatingCartButtons() {
+        const legacyIcon = document.getElementById('cartIcon');
+        const floatingButton = document.getElementById('floatingCartButton');
+
+        if (legacyIcon) {
+            legacyIcon.style.display = 'none';
+        }
+
+        if (floatingButton) {
+            floatingButton.style.display = 'none';
         }
     },
 
@@ -488,6 +530,12 @@ window.ShoppingCart = {
      */
     createFloatingCartButton() {
         console.log('🎯 createFloatingCartButton() called');
+
+        if (this.config.hideFloatingCartIcon) {
+            this.hideFloatingCartButtons();
+            console.log('🛒 [CART] Floating cart icon hidden by website setting');
+            return;
+        }
         
         // Check if already exists
         if (document.getElementById('floatingCartButton')) {

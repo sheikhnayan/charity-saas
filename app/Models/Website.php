@@ -38,11 +38,13 @@ class Website extends Model
         'property_details_muted_color',
         'property_details_heading_color',
         'property_details_price_color',
-        'property_details_accent_color'
+        'property_details_accent_color',
+        'hide_floating_cart_icon'
     ];
 
     protected $casts = [
         'contact_emails' => 'array',
+        'hide_floating_cart_icon' => 'boolean',
     ];
 
     /**

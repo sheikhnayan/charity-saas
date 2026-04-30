@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Website;
 use App\Services\CartService;
 use Illuminate\Http\Request;
 
@@ -57,6 +58,27 @@ class CartController extends Controller
         return response()->json([
             'success' => true,
             'cart' => $this->cartService->getSummary()
+        ]);
+    }
+
+    /**
+     * Get frontend cart configuration for current website
+     * GET /api/cart/config
+     */
+    public function config(Request $request)
+    {
+        $host = strtolower((string) $request->getHost());
+
+        $website = Website::query()
+            ->whereRaw('LOWER(domain) = ?', [$host])
+            ->orWhereRaw('LOWER(domain) = ?', [preg_replace('/^www\./', '', $host)])
+            ->orWhereRaw('LOWER(domain) = ?', ['www.' . preg_replace('/^www\./', '', $host)])
+            ->first();
+
+        return response()->json([
+            'success' => true,
+            'hide_floating_cart_icon' => (bool) ($website?->hide_floating_cart_icon ?? false),
+            'website_id' => $website?->id,
         ]);
     }
 

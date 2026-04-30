@@ -79,6 +79,7 @@ class WebsiteController extends Controller
             $add->type = $request->type;
             $add->status = 1;
             $add->custom_sticky_button_text = $request->custom_sticky_button_text;
+            $add->hide_floating_cart_icon = $request->boolean('hide_floating_cart_icon');
             
             // Add investment fields for all website types
             $add->share_price = $request->share_price ?? null;
@@ -277,6 +278,7 @@ class WebsiteController extends Controller
 
         $update->status = $request->status;
         $update->custom_sticky_button_text = $request->custom_sticky_button_text;
+        $update->hide_floating_cart_icon = $request->boolean('hide_floating_cart_icon');
         // Add investment fields for all website types
         $update->share_price = $request->share_price ?? null;
         $update->google_analytics_id = $request->google_analytics_id ?? null;

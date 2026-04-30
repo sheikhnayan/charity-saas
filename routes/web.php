@@ -1643,6 +1643,7 @@ Route::post('/ajax/ticket-auth/forgot-reset', function(Request $request) {
 Route::prefix('api/cart')->group(function () {
     Route::post('/add', [App\Http\Controllers\CartController::class, 'add'])->name('cart.api.add');
     Route::get('/', [App\Http\Controllers\CartController::class, 'get'])->name('cart.api.get');
+    Route::get('/config', [App\Http\Controllers\CartController::class, 'config'])->name('cart.api.config');
     Route::put('/item/{key}', [App\Http\Controllers\CartController::class, 'update'])->name('cart.api.update');
     Route::delete('/item/{key}', [App\Http\Controllers\CartController::class, 'remove'])->name('cart.api.remove');
     Route::delete('/clear', [App\Http\Controllers\CartController::class, 'clear'])->name('cart.api.clear');

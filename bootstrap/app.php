@@ -3,8 +3,6 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Http\Request;
-use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -49,29 +47,5 @@ return Application::configure(basePath: dirname(__DIR__))
         }
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        $exceptions->render(function (Throwable $exception, Request $request) {
-            if (app()->environment(['local', 'testing']) || $request->expectsJson()) {
-                return null;
-            }
-
-            $status = $exception instanceof HttpExceptionInterface
-                ? $exception->getStatusCode()
-                : 500;
-
-            if ($status < 400 || $status > 599) {
-                $status = 500;
-            }
-
-            $message = match ($status) {
-                403 => 'You do not have permission to access this page.',
-                404 => 'The page you requested could not be found.',
-                419 => 'Your session has expired. Please refresh and try again.',
-                default => 'An unexpected error occurred. Please try again shortly.',
-            };
-
-            return response()->view('errors.production', [
-                'status' => $status,
-                'message' => $message,
-            ], $status);
-        });
+        //
     })->create();

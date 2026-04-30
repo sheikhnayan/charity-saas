@@ -261,6 +261,16 @@ label{
                                                 </div>
                                             </div>
 
+                                            <div class="row">
+                                                <div class="col-md-12">
+                                                    <div class="mb-3 form-check">
+                                                        <input type="checkbox" class="form-check-input" id="hide_floating_cart_icon" name="hide_floating_cart_icon" value="1" {{ !empty($data->hide_floating_cart_icon) ? 'checked' : '' }}>
+                                                        <label class="form-check-label" for="hide_floating_cart_icon">Hide Floating Cart Icon On Frontend</label>
+                                                        <small class="form-text text-muted d-block">When enabled, the floating cart button/icon is hidden for this website on all frontend pages.</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+
                                             <!-- Investment-specific fields -->
                                             <div class="row" id="investment-fields" style="display: {{ $data->type == 'investment' ? 'block' : 'none' }};">
                                                 <div class="col-md-6">
