@@ -14,6 +14,7 @@ use App\Models\MailedCheck;
 use App\Models\WireTransfer;
 use App\Models\Tax;
 use App\Services\HeaderFooterBuilderService;
+use Illuminate\Validation\Rule;
 use Auth;
 use Hash;
 
@@ -46,7 +47,8 @@ class WebsiteController extends Controller
         $validation = [
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
+            // Global email uniqueness is intentionally disabled; uniqueness is per website.
+            'email' => 'required|email',
             'password' => 'required|string|min:6',
             'name' => 'required|string|max:255',
             'domain' => 'required|string|max:255',
@@ -250,12 +252,25 @@ class WebsiteController extends Controller
         $this->authorizeWebsiteAccess($website);
 
         $isWebsiteOwner = Auth::check() && Auth::user()->role === 'user';
+        $user = User::where('website_id', $website->id)->where('role', 'user')->first()
+            ?? User::where('website_id', $website->id)->first();
+
+        $emailRule = Rule::unique('users', 'email')->where(function ($query) use ($website) {
+            return $query->where('website_id', $website->id);
+        });
+        if ($user) {
+            $emailRule = $emailRule->ignore($user->id);
+        }
 
         // Validate the request
         $validation = [
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            'email' => 'required|email',
+            'email' => [
+                'required',
+                'email',
+                $emailRule,
+            ],
             'name' => 'required|string|max:255',
             'domain' => $isWebsiteOwner ? 'sometimes|nullable|string|max:255' : 'required|string|max:255',
             'type' => $isWebsiteOwner ? 'sometimes|nullable|in:fundraiser,investment' : 'required|in:fundraiser,investment',
@@ -325,11 +340,10 @@ class WebsiteController extends Controller
         $update->update();
 
         // Update related user info
-        $user = User::where('website_id', $update->id)->first();
         if ($user) {
             $user->name = $request->first_name;
             $user->last_name = $request->last_name;
-            // $user->email = $request->email;
+            $user->email = $request->email;
             if ($request->filled('password')) {
                 $user->password = Hash::make($request->password);
             }

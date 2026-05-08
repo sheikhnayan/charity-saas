@@ -16,44 +16,109 @@ class AuthController extends Controller
 {
     public function login(Request $request)
     {
-        // Login is intentionally global across websites.
-        // If the same email exists on multiple websites, we authenticate against
-        // the first account whose stored password matches the submitted password.
-        $user = null;
+        // Login is email-based, but when one email/password pair matches
+        // multiple website-scoped accounts, user must pick target website.
+        $matchedUsers = [];
         $candidates = User::where('email', $request->email)->get();
         foreach ($candidates as $candidate) {
             if (\Hash::check($request->password, $candidate->password)) {
-                $user = $candidate;
-                break;
+                $matchedUsers[] = $candidate;
             }
         }
 
-        if ($user) {
-            Auth::login($user);
-            $request->session()->regenerate();
-            $user = Auth::user();
-            
-            if ($user) {
-                // Check if user is parent or individual and if their status is not active
-                if (in_array($user->role, ['parents', 'individual']) && $user->status != 1) {
-                    Auth::logout();
-                    return redirect('/')->with('error', 'Your account is pending approval. Please wait for administrator approval before logging in.');
-                }
+        if (count($matchedUsers) === 1) {
+            return $this->finalizeLogin($request, $matchedUsers[0], $request->redirect_to);
+        }
 
-                // Check if redirect_to parameter is provided (e.g., from page-investment)
-                if ($request->has('redirect_to') && $request->redirect_to) {
-                    return redirect($request->redirect_to)->with('success', 'Login successful');
-                }
+        if (count($matchedUsers) > 1) {
+            $request->session()->put('login_selection', [
+                'user_ids' => collect($matchedUsers)->pluck('id')->all(),
+                'email' => $request->email,
+                'redirect_to' => $request->redirect_to,
+            ]);
 
-                if ($user->role == 'admin') {
-                    return redirect()->intended('/admins')->with('success', 'Login successful');
-                } else {
-                    return redirect()->intended('/users')->with('success', 'Login successful');
-                }
-            }
+            return redirect()->route('login.select.website');
         }
 
         return redirect('login')->with('error', 'Invalid credentials');
+    }
+
+    public function showWebsiteSelection(Request $request)
+    {
+        $selection = $request->session()->get('login_selection');
+        if (empty($selection['user_ids']) || !is_array($selection['user_ids'])) {
+            return redirect()->route('login')->with('error', 'Your login session expired. Please try again.');
+        }
+
+        $accounts = User::with('website')
+            ->whereIn('id', $selection['user_ids'])
+            ->get()
+            ->sortBy(function ($user) {
+                return strtolower($user->website->name ?? $user->website->domain ?? '');
+            })
+            ->values();
+
+        if ($accounts->isEmpty()) {
+            $request->session()->forget('login_selection');
+            return redirect()->route('login')->with('error', 'No matching accounts were found. Please login again.');
+        }
+
+        return view('auth.select-website-login', [
+            'email' => $selection['email'] ?? null,
+            'accounts' => $accounts,
+        ]);
+    }
+
+    public function completeWebsiteSelection(Request $request)
+    {
+        $selection = $request->session()->get('login_selection');
+        if (empty($selection['user_ids']) || !is_array($selection['user_ids'])) {
+            return redirect()->route('login')->with('error', 'Your login session expired. Please try again.');
+        }
+
+        $request->validate([
+            'user_id' => 'required|integer',
+        ]);
+
+        $allowedUserIds = $selection['user_ids'];
+        $selectedUserId = (int) $request->user_id;
+
+        if (!in_array($selectedUserId, array_map('intval', $allowedUserIds), true)) {
+            return redirect()->route('login.select.website')->with('error', 'Invalid website selection.');
+        }
+
+        $user = User::find($selectedUserId);
+        if (!$user) {
+            $request->session()->forget('login_selection');
+            return redirect()->route('login')->with('error', 'Selected account no longer exists. Please login again.');
+        }
+
+        $redirectTo = $selection['redirect_to'] ?? null;
+        $request->session()->forget('login_selection');
+
+        return $this->finalizeLogin($request, $user, $redirectTo);
+    }
+
+    protected function finalizeLogin(Request $request, User $user, $redirectTo = null)
+    {
+        Auth::login($user);
+        $request->session()->regenerate();
+
+        // Check if user is parent or individual and if their status is not active
+        if (in_array($user->role, ['parents', 'individual']) && $user->status != 1) {
+            Auth::logout();
+            return redirect('/')->with('error', 'Your account is pending approval. Please wait for administrator approval before logging in.');
+        }
+
+        if (!empty($redirectTo)) {
+            return redirect($redirectTo)->with('success', 'Login successful');
+        }
+
+        if ($user->role == 'admin') {
+            return redirect()->intended('/admins')->with('success', 'Login successful');
+        }
+
+        return redirect()->intended('/users')->with('success', 'Login successful');
     }
 
     public function register(Request $request)

@@ -111,6 +111,9 @@
           @endif
           <form method="POST" action="/login" novalidate>
             @csrf
+            @if(request()->filled('redirect_to'))
+              <input type="hidden" name="redirect_to" value="{{ request('redirect_to') }}">
+            @endif
             <div class="mb-3">
               <label for="email" class="form-label">Email address</label>
               <input type="email" class="form-control" id="email" name="email" placeholder="you@example.com" required>

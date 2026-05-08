@@ -730,6 +730,8 @@ Route::get('/page/{id}', [FrontendController::class, 'page'])->name('page');
 Route::get('/dealmaker-demo', [FrontendController::class, 'dealmakerDemo'])->name('dealmaker.demo');
 
 Route::post('/login', [AuthController::class, 'login']);
+Route::get('/login/select-website', [AuthController::class, 'showWebsiteSelection'])->name('login.select.website');
+Route::post('/login/select-website', [AuthController::class, 'completeWebsiteSelection'])->name('login.select.website.submit');
 
 Route::post('/register', [AuthController::class, 'register']);
 
