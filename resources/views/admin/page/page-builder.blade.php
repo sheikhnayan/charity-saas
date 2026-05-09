@@ -14915,10 +14915,14 @@ function updateResponsiveCSS() {
     componentsWithStyles.forEach((component, index) => {
         const content = getContentElement(component);
         if (content && content._responsiveStyles) {
-            const componentId = component.id || `component-${index}`;
-            if (!component.id) {
-                component.id = componentId;
+            // Use a dedicated unique selector key for responsive CSS targeting.
+            // Component IDs can be duplicated in some deserialize paths.
+            let responsiveStyleId = component.dataset.responsiveStyleId;
+            if (!responsiveStyleId) {
+                responsiveStyleId = `rsp-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`;
+                component.dataset.responsiveStyleId = responsiveStyleId;
             }
+            const componentSelector = `.component[data-responsive-style-id="${responsiveStyleId}"]`;
             
             const styles = content._responsiveStyles;
             
@@ -14934,11 +14938,11 @@ function updateResponsiveCSS() {
                     .join('; ');
                 
                 if (desktopMargins) {
-                    css += `#${componentId} { ${desktopMargins}; }\n`;
+                    css += `${componentSelector} { ${desktopMargins}; }\n`;
                 }
                 if (desktopPaddings) {
                     // Apply padding directly to the content element, but exclude investment tier components
-                    css += `#${componentId} > *:not(.component-controls):not(.perk-wrap):not(.investment-tier):not(.investment-tier-component):not(.statistics-metric-component) { ${desktopPaddings}; }\n`;
+                    css += `${componentSelector} > *:not(.component-controls):not(.perk-wrap):not(.investment-tier):not(.investment-tier-component):not(.statistics-metric-component) { ${desktopPaddings}; }\n`;
                 }
             }
             
@@ -14955,21 +14959,21 @@ function updateResponsiveCSS() {
                 
                 if (tabletMargins) {
                     css += `@media screen and (max-width: 991px) and (min-width: 768px) {\n`;
-                    css += `  #${componentId} { ${tabletMargins}; }\n`;
+                    css += `  ${componentSelector} { ${tabletMargins}; }\n`;
                     css += `}\n`;
                 }
                 if (tabletPaddings) {
                     css += `@media screen and (max-width: 991px) and (min-width: 768px) {\n`;
-                    css += `  #${componentId} > *:not(.component-controls):not(.perk-wrap):not(.investment-tier):not(.investment-tier-component):not(.statistics-metric-component) { ${tabletPaddings}; }\n`;
+                    css += `  ${componentSelector} > *:not(.component-controls):not(.perk-wrap):not(.investment-tier):not(.investment-tier-component):not(.statistics-metric-component) { ${tabletPaddings}; }\n`;
                     css += `}\n`;
                 }
                 
                 // Also apply to tablet preview mode
                 if (tabletMargins) {
-                    css += `.canvas.tablet-view #${componentId} { ${tabletMargins}; }\n`;
+                    css += `.canvas.tablet-view ${componentSelector} { ${tabletMargins}; }\n`;
                 }
                 if (tabletPaddings) {
-                    css += `.canvas.tablet-view #${componentId} > *:not(.component-controls):not(.perk-wrap):not(.investment-tier):not(.investment-tier-component):not(.statistics-metric-component) { ${tabletPaddings}; }\n`;
+                    css += `.canvas.tablet-view ${componentSelector} > *:not(.component-controls):not(.perk-wrap):not(.investment-tier):not(.investment-tier-component):not(.statistics-metric-component) { ${tabletPaddings}; }\n`;
                 }
             }
             
@@ -14986,21 +14990,21 @@ function updateResponsiveCSS() {
                 
                 if (mobileMargins) {
                     css += `@media screen and (max-width: 767px) {\n`;
-                    css += `  #${componentId} { ${mobileMargins}; }\n`;
+                    css += `  ${componentSelector} { ${mobileMargins}; }\n`;
                     css += `}\n`;
                 }
                 if (mobilePaddings) {
                     css += `@media screen and (max-width: 767px) {\n`;
-                    css += `  #${componentId} > *:not(.component-controls):not(.perk-wrap):not(.investment-tier):not(.investment-tier-component):not(.statistics-metric-component) { ${mobilePaddings}; }\n`;
+                    css += `  ${componentSelector} > *:not(.component-controls):not(.perk-wrap):not(.investment-tier):not(.investment-tier-component):not(.statistics-metric-component) { ${mobilePaddings}; }\n`;
                     css += `}\n`;
                 }
                 
                 // Also apply to mobile preview mode
                 if (mobileMargins) {
-                    css += `.canvas.mobile-view #${componentId} { ${mobileMargins}; }\n`;
+                    css += `.canvas.mobile-view ${componentSelector} { ${mobileMargins}; }\n`;
                 }
                 if (mobilePaddings) {
-                    css += `.canvas.mobile-view #${componentId} > *:not(.component-controls):not(.perk-wrap):not(.investment-tier):not(.investment-tier-component):not(.statistics-metric-component) { ${mobilePaddings}; }\n`;
+                    css += `.canvas.mobile-view ${componentSelector} > *:not(.component-controls):not(.perk-wrap):not(.investment-tier):not(.investment-tier-component):not(.statistics-metric-component) { ${mobilePaddings}; }\n`;
                 }
             }
         }
