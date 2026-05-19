@@ -1708,7 +1708,8 @@ if (isset($state['components'])) {
     @endif
     
     @if ($header && $header->show_contect_topbar == 0)
-        <main style="margin-top: 5.4rem !important" >
+        {{-- <main style="margin-top: 5.4rem !important" > --}}
+        <main>
     @else
     <main style="margin-top: var(--main-content-margin-top, {{ 
         ($header && $header->show_contact_topbar == 1 && $check && $header->show_investor_exclusives == 1) ? '14.2rem' : 
