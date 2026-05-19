@@ -1471,6 +1471,8 @@ h5, .ql-header-5 {
                     onload="(function(iframe){
                         try {
                             var resizeFrameId = null;
+                            var interactionResizeTimer = null;
+                            var heartbeatResizeTimer = null;
                             var resizeIframe = function() {
                                 var doc = iframe.contentDocument || iframe.contentWindow.document;
                                 if (doc && doc.body) {
@@ -1568,6 +1570,14 @@ h5, .ql-header-5 {
                                 });
                             };
 
+                            var scheduleResizeBurst = function() {
+                                scheduleResize();
+                                setTimeout(scheduleResize, 60);
+                                setTimeout(scheduleResize, 140);
+                                setTimeout(scheduleResize, 260);
+                                setTimeout(scheduleResize, 420);
+                            };
+
                             var setupObservers = function() {
                                 var doc = iframe.contentDocument || iframe.contentWindow.document;
                                 if (!doc || !doc.body) {
@@ -1601,6 +1611,7 @@ h5, .ql-header-5 {
                                 if (iframe.contentWindow) {
                                     iframe.contentWindow.addEventListener('resize', scheduleResize);
                                     iframe.contentWindow.addEventListener('load', scheduleResize);
+                                    iframe.contentWindow.addEventListener('scroll', scheduleResize, { passive: true });
                                 }
 
                                 var media = doc.querySelectorAll('img, video, iframe, embed, object');
@@ -1611,17 +1622,37 @@ h5, .ql-header-5 {
 
                                 // CSS-only UI changes (hover menus, checkbox toggles, transitions)
                                 // do not always mutate DOM. Listen to interaction/layout events too.
-                                doc.addEventListener('click', scheduleResize, true);
-                                doc.addEventListener('input', scheduleResize, true);
-                                doc.addEventListener('change', scheduleResize, true);
-                                doc.addEventListener('keyup', scheduleResize, true);
-                                doc.addEventListener('mouseover', scheduleResize, true);
-                                doc.addEventListener('transitionend', scheduleResize, true);
-                                doc.addEventListener('animationend', scheduleResize, true);
+                                doc.addEventListener('click', scheduleResizeBurst, true);
+                                doc.addEventListener('input', scheduleResizeBurst, true);
+                                doc.addEventListener('change', scheduleResizeBurst, true);
+                                doc.addEventListener('keyup', scheduleResizeBurst, true);
+                                doc.addEventListener('mouseover', scheduleResizeBurst, true);
+                                doc.addEventListener('mouseenter', scheduleResizeBurst, true);
+                                doc.addEventListener('mouseleave', scheduleResizeBurst, true);
+                                doc.addEventListener('transitionend', scheduleResizeBurst, true);
+                                doc.addEventListener('animationend', scheduleResizeBurst, true);
+
+                                // While interacting with hover menus, keep sampling for a short window.
+                                doc.addEventListener('mousemove', function() {
+                                    if (interactionResizeTimer) {
+                                        return;
+                                    }
+
+                                    var count = 0;
+                                    interactionResizeTimer = setInterval(function() {
+                                        scheduleResize();
+                                        count += 1;
+                                        if (count >= 8) {
+                                            clearInterval(interactionResizeTimer);
+                                            interactionResizeTimer = null;
+                                        }
+                                    }, 120);
+                                }, true);
                             };
 
                             resizeIframe();
                             setupObservers();
+                            heartbeatResizeTimer = setInterval(scheduleResize, 700);
                             setTimeout(scheduleResize, 100);
                             setTimeout(scheduleResize, 500);
                             setTimeout(scheduleResize, 1000);
@@ -1630,6 +1661,18 @@ h5, .ql-header-5 {
                             setTimeout(scheduleResize, 4000);
                             setTimeout(scheduleResize, 6000);
                             setTimeout(scheduleResize, 10000);
+
+                            // Avoid orphan timers if iframe unloads.
+                            if (iframe.contentWindow) {
+                                iframe.contentWindow.addEventListener('beforeunload', function() {
+                                    if (interactionResizeTimer) {
+                                        clearInterval(interactionResizeTimer);
+                                    }
+                                    if (heartbeatResizeTimer) {
+                                        clearInterval(heartbeatResizeTimer);
+                                    }
+                                });
+                            }
                         } catch(e) { console.warn('Auto-resize failed:', e); }
                     })(this);">
                 </iframe>
