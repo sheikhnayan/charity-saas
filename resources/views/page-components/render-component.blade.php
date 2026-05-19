@@ -1504,6 +1504,34 @@ h5, .ql-header-5 {
                                             if (!node || !node.getBoundingClientRect) {
                                                 return;
                                             }
+
+                                            var nodeStyle = null;
+                                            try {
+                                                nodeStyle = iframe.contentWindow && iframe.contentWindow.getComputedStyle
+                                                    ? iframe.contentWindow.getComputedStyle(node)
+                                                    : null;
+                                            } catch (styleError) {
+                                                nodeStyle = null;
+                                            }
+
+                                            // Ignore hidden/collapsed nodes (e.g. dropdown menus with visibility:hidden/opacity:0)
+                                            // so closed menus do not inflate iframe height.
+                                            if (nodeStyle) {
+                                                if (nodeStyle.display === 'none' || nodeStyle.visibility === 'hidden') {
+                                                    return;
+                                                }
+
+                                                var opacity = parseFloat(nodeStyle.opacity || '1');
+                                                if (!isNaN(opacity) && opacity <= 0) {
+                                                    return;
+                                                }
+
+                                                var maxHeight = parseFloat(nodeStyle.maxHeight || '0');
+                                                if (!isNaN(maxHeight) && maxHeight === 0 && nodeStyle.overflow === 'hidden') {
+                                                    return;
+                                                }
+                                            }
+
                                             var rect = node.getBoundingClientRect();
                                             if (rect && isFinite(rect.bottom)) {
                                                 var bottom = Math.ceil(rect.bottom + scrollTop);
