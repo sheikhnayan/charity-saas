@@ -1459,7 +1459,7 @@ h5, .ql-header-5 {
                 $htmlContentWithScript = $iframeBaseStyle . $htmlContent . $linkHandlerScript;
             @endphp
             
-            <div class="custom-html-component" id="{{ $componentId }}" style="{{ $customHtmlStyleStr }}overflow: visible; margin-top: 30px !important;">
+            <div class="custom-html-component" id="{{ $componentId }}-custom-html" style="{{ $customHtmlStyleStr }}overflow: visible; margin-top: 30px !important;">
                 <iframe 
                     id="{{ $iframeId }}"
                     srcdoc="{!! htmlspecialchars($htmlContentWithScript) !!}" 
@@ -1589,6 +1589,9 @@ h5, .ql-header-5 {
                             setTimeout(scheduleResize, 1000);
                             setTimeout(scheduleResize, 1500);
                             setTimeout(scheduleResize, 2500);
+                            setTimeout(scheduleResize, 4000);
+                            setTimeout(scheduleResize, 6000);
+                            setTimeout(scheduleResize, 10000);
                         } catch(e) { console.warn('Auto-resize failed:', e); }
                     })(this);">
                 </iframe>
