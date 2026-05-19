@@ -7,6 +7,7 @@
     @foreach($components as $componentData)
         @include('builders.render-builder-component', [
             'componentData' => $componentData,
+            'builderScope' => 'header',
             'header' => $header,
             'footer' => $footer,
             'check' => $check,

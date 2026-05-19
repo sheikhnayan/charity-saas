@@ -66,6 +66,7 @@
                                 @foreach($column as $nestedComponent)
                                     @include('builders.render-builder-component', [
                                         'componentData' => $nestedComponent,
+                                        'builderScope' => $builderScope ?? null,
                                         'header' => $header,
                                         'footer' => $footer,
                                         'check' => $check,
@@ -464,6 +465,7 @@
     @include('page-components.render-component', [
         'component' => $componentData,
         'componentId' => $componentData['id'] ?? ('builder-' . uniqid()),
+        'builderScope' => $builderScope ?? null,
         'isNested' => true,
     ])
 @endif

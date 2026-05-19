@@ -1391,6 +1391,7 @@ h5, .ql-header-5 {
             @php
                 $htmlContent = $component['customHtmlData']['htmlContent'] ?? $component['properties']['htmlContent'] ?? '<div style="padding: 20px; text-align: center;"><h3>Custom HTML Content</h3><p>Add your custom HTML code in the page builder</p></div>';
                 $height = $component['customHtmlData']['height'] ?? $component['properties']['height'] ?? '300';
+                $renderInlineForHeader = (($builderScope ?? null) === 'header');
                 $iframeId = 'custom-html-' . uniqid();
                 // Custom HTML should size to its content, so strip inherited height caps.
                 $customHtmlStyleStr = preg_replace('/(?:^|;)\s*(?:height|min-height|max-height|overflow(?:-[xy])?)\s*:[^;]*;?/i', ';', $styleStr);
@@ -1458,7 +1459,11 @@ h5, .ql-header-5 {
                 // Append base styles and script to the HTML content
                 $htmlContentWithScript = $iframeBaseStyle . $htmlContent . $linkHandlerScript;
             @endphp
-            
+            @if($renderInlineForHeader)
+            <div class="custom-html-component custom-html-inline-header" id="{{ $componentId }}-custom-html" style="{{ $customHtmlStyleStr }}overflow: visible; margin-top: 0 !important;">
+                {!! $htmlContent !!}
+            </div>
+            @else
             <div class="custom-html-component" id="{{ $componentId }}-custom-html" style="{{ $customHtmlStyleStr }}overflow: visible; margin-top: 30px !important;">
                 <iframe 
                     id="{{ $iframeId }}"
@@ -1677,6 +1682,7 @@ h5, .ql-header-5 {
                     })(this);">
                 </iframe>
             </div>
+            @endif
         @break
 
         @case('text')
