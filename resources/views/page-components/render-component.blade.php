@@ -1524,7 +1524,7 @@ h5, .ql-header-5 {
 
                                     var currentHeight = parseInt(iframe.style.height, 10) || 0;
                                     if (Math.abs(currentHeight - height) > 1) {
-                                        iframe.style.height = height + 'px';
+                                        iframe.style.setProperty('height', height + 'px', 'important');
                                     }
                                 }
                             };
@@ -1580,6 +1580,16 @@ h5, .ql-header-5 {
                                     node.addEventListener('load', scheduleResize);
                                     node.addEventListener('error', scheduleResize);
                                 });
+
+                                // CSS-only UI changes (hover menus, checkbox toggles, transitions)
+                                // do not always mutate DOM. Listen to interaction/layout events too.
+                                doc.addEventListener('click', scheduleResize, true);
+                                doc.addEventListener('input', scheduleResize, true);
+                                doc.addEventListener('change', scheduleResize, true);
+                                doc.addEventListener('keyup', scheduleResize, true);
+                                doc.addEventListener('mouseover', scheduleResize, true);
+                                doc.addEventListener('transitionend', scheduleResize, true);
+                                doc.addEventListener('animationend', scheduleResize, true);
                             };
 
                             resizeIframe();
