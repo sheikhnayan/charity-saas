@@ -53,6 +53,7 @@ class WebsiteController extends Controller
             'name' => 'required|string|max:255',
             'domain' => 'required|string|max:255',
             'type' => 'required|in:fundraiser,investment',
+            'google_analytics_id' => 'nullable|string|max:255',
         ];
 
         // Add investment fields for all website types
@@ -85,6 +86,7 @@ class WebsiteController extends Controller
             
             // Add investment fields for all website types
             $add->share_price = $request->share_price ?? null;
+            $add->google_analytics_id = $request->google_analytics_id ?? null;
             $add->investment_title = $request->investment_title ?? null;
             $add->min_investment = $request->min_investment ?? null;
             $add->investment_tiers = $request->investment_tiers ?? null;
@@ -275,6 +277,7 @@ class WebsiteController extends Controller
             'domain' => $isWebsiteOwner ? 'sometimes|nullable|string|max:255' : 'required|string|max:255',
             'type' => $isWebsiteOwner ? 'sometimes|nullable|in:fundraiser,investment' : 'required|in:fundraiser,investment',
             'status' => 'required|in:0,1',
+            'google_analytics_id' => 'nullable|string|max:255',
         ];
         // Only validate password if present
         if ($request->filled('password')) {

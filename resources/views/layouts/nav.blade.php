@@ -1,20 +1,4 @@
-<!-- Google Analytics -->
-    @php
-        // Get website by domain
-        $currentDomain = request()->host();
-        $website = \App\Models\Website::where('domain', $currentDomain)->first();
-        // dd($website);
-        $gaTrackingId = $website->google_analytics_id ?? null;
-    @endphp
-    @if($gaTrackingId)
-    <script async src="https://www.googletagmanager.com/gtag/js?id={{ $gaTrackingId }}"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', '{{ $gaTrackingId }}');
-    </script>
-    @endif
+@include('layouts.google-analytics')
 <!-- Tailwind CSS with Bootstrap compatibility -->
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
