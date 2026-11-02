@@ -1522,9 +1522,7 @@ if (isset($state['components'])) {
         // Start initialization
         setTimeout(initCartNow, 100);
     </script>
-    @if($data && $data->is_main_site)
-        @include('layouts.google-analytics', ['website' => $check])
-    @endif
+    @include('layouts.google-analytics', ['website' => $check ?? null])
 </head>
 <body style="background-color: {{ $data->background_color ?? '#fff'}}; margin: 0; padding: 0;">
     @php
